@@ -43,15 +43,15 @@ def test_suite():
 
     from wsgiref.tests import test_util
     from wsgiref.tests import test_headers
+    from wsgiref.tests import test_handlers
 
     tests = [
         test_util.test_suite(),
         test_headers.test_suite(),
+        test_handlers.test_suite(),
     ]
 
     return TestSuite(tests)
-
-
 
 
 

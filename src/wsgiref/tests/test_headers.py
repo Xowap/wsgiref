@@ -41,21 +41,21 @@ class HeaderTests(TestCase):
 
     def testExtras(self):
         h = Headers([])
+        self.assertEqual(str(h),'\r\n')
+
         h.add_header('foo','bar',baz="spam")
         self.assertEqual(h['foo'], 'bar; baz="spam"')
+        self.assertEqual(str(h),'foo: bar; baz="spam"\r\n\r\n')
+
         h.add_header('Foo','bar',cheese=None)
         self.assertEqual(h.get_all('foo'),
             ['bar; baz="spam"', 'bar; cheese'])
+
         self.assertEqual(str(h),
             'foo: bar; baz="spam"\r\n'
             'Foo: bar; cheese\r\n'
             '\r\n'
         )
-
-
-
-
-
 
 
 
@@ -86,5 +86,38 @@ TestClasses = (
 
 def test_suite():
     return TestSuite([makeSuite(t,'test') for t in TestClasses])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

@@ -147,7 +147,7 @@ class Headers:
     def __str__(self):
         """str() returns the formatted headers, complete with end line,
         suitable for direct HTTP transmission."""
-        return '\r\n'.join(["%s: %s" % kv for kv in self._headers])+'\r\n'*2
+        return '\r\n'.join(["%s: %s" % kv for kv in self._headers]+['',''])
 
 
 
