@@ -170,7 +170,7 @@ class HandlerTests(TestCase):
 
         stdpat = (
             r"HTTP/%s 200 OK\r\n"
-            r"Date: \w{3} \w{3} \d{2} \d\d:\d\d:\d\d \d{4}\r\n"
+            r"Date: \w{3} \w{3} [ 0123]\d \d\d:\d\d:\d\d \d{4}\r\n"
             r"%s" r"Content-Length: 0\r\n" r"\r\n"
         )
         shortpat = (
