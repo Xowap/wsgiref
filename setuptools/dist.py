@@ -8,7 +8,7 @@ class Distribution(_Distribution):
     requires = ()
 
     # 'test' command
-    test_module = None
+    test_suite = None
 
     def __init__ (self, attrs=None):
         self.package_data = {}
