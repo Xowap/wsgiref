@@ -149,17 +149,17 @@ class Headers:
         suitable for direct HTTP transmission."""
         return '\r\n'.join(["%s: %s" % kv for kv in self._headers]+['',''])
 
+    def setdefault(self,name,value):
+        """Return first matching header value for 'name', or 'value'
 
-
-
-
-
-
-
-
-
-
-
+        If there is no header named 'name', add a new header with name 'name'
+        and value 'value'."""
+        result = self.get(name)
+        if result is None:
+            self._headers.append((name,value))
+            return value
+        else:
+            return result
 
 
     def add_header(self, _name, _value, **_params):

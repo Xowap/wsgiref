@@ -84,6 +84,7 @@ class UtilityTests(TestCase):
         for key, value in [
             ('SERVER_NAME','127.0.0.1'),
             ('SERVER_PORT', '80'),
+            ('SERVER_PROTOCOL','HTTP/1.0'),
             ('HTTP_HOST','127.0.0.1'),
             ('REQUEST_METHOD','GET'),
             ('SCRIPT_NAME',''),
@@ -120,7 +121,6 @@ class UtilityTests(TestCase):
 
 
 
-
     def testAppURIs(self):
         self.checkAppURI("http://127.0.0.1/")
         self.checkAppURI("http://127.0.0.1/spam", SCRIPT_NAME="/spam")
@@ -146,20 +146,20 @@ class UtilityTests(TestCase):
     def testFileWrapper(self):
         self.checkFW("xyz"*50, 120, ["xyz"*40,"xyz"*10])
 
+    def testHopByHop(self):
+        for hop in (
+            "Connection Keep-Alive Proxy-Authenticate Proxy-Authorization "
+            "TE Trailers Transfer-Encoding Upgrade"
+        ).split():
+            for alt in hop, hop.title(), hop.upper(), hop.lower():
+                self.failUnless(util.is_hop_by_hop(alt))
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+        # Not comprehensive, just a few random header names
+        for hop in (
+            "Accept Cache-Control Date Pragma Trailer Via Warning"
+        ).split():
+            for alt in hop, hop.title(), hop.upper(), hop.lower():
+                self.failIf(util.is_hop_by_hop(alt))
 
 
 TestClasses = (

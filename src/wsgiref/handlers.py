@@ -1,10 +1,10 @@
 """Base classes for server/gateway implementations"""
 
 from types import StringType
-from util import FileWrapper, guess_scheme
+from util import FileWrapper, guess_scheme, is_hop_by_hop
 from headers import Headers
 
-import sys, os
+import sys, os, time
 
 try:
     dict
@@ -48,6 +48,10 @@ class BaseHandler:
     wsgi_multiprocess = True
     wsgi_run_once = False
 
+    origin_server = True    # We are transmitting direct to client
+    http_version  = "1.0"   # Version that should be used for response
+    server_software = None  # String name of server software, if any
+
     # os_environ is used to supply configuration from the OS environment:
     # by default it's a copy of 'os.environ' as of import time, but you can
     # override this in e.g. your __init__ method.
@@ -68,10 +72,6 @@ class BaseHandler:
     headers_sent = False
     headers = None
     bytes_sent = 0
-
-
-
-
 
 
 
@@ -151,16 +151,16 @@ class BaseHandler:
             if blocks==1:
                 self.headers['Content-Length'] = str(self.bytes_sent)
                 return
-        # XXX Try for chunked encoding if enabled
+        # XXX Try for chunked encoding if origin server and client is 1.1
         
 
     def cleanup_headers(self):
-        """Make any necessary header changes or defaults"""
+        """Make any necessary header changes or defaults
+
+        Subclasses can extend this to add other defaults.
+        """
         if not self.headers.has_key('Content-Length'):
             self.set_content_length()
-
-        # XXX set up Date, Server headers 
-
 
     def start_response(self, status, headers,exc_info=None):
         """'start_response()' callable as specified by PEP 333"""
@@ -183,25 +183,25 @@ class BaseHandler:
             for name,val in headers:
                 assert type(name) is StringType,"Header names must be strings"
                 assert type(val) is StringType,"Header values must be strings"
-
+                assert not is_hop_by_hop(name),"Hop-by-hop headers not allowed"
         self.status = status
         self.headers = self.headers_class(headers)
         return self.write
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+    def send_preamble(self):
+        """Transmit version/status/date/server, via self._write()"""
+        if self.origin_server:
+            if self.client_is_modern():
+                self._write('HTTP/%s %s\r\n' % (self.http_version,self.status))
+                if not self.headers.has_key('Date'):
+                    self._write(
+                        'Date: %s\r\n' % time.asctime(time.gmtime(time.time()))
+                    )
+                if self.server_software and not self.headers.has_key('Server'):
+                    self._write('Server: %s\r\n' % self.server_software) 
+        else:
+            self._write('Status: %s\r\n' % self.status)
 
     def write(self, data):
         """'write()' callable as specified by PEP 333"""
@@ -265,24 +265,24 @@ class BaseHandler:
             self.bytes_sent = 0; self.headers_sent = False
 
 
-    def send_status(self):
-        """Transmit the status to the client, via self._write()
-
-        (BaseCGIHandler overrides this to use a "Status:" prefix.)"""
-        self._write('%s\r\n' % status)
-
     def send_headers(self):
         """Transmit headers to the client, via self._write()"""
         self.cleanup_headers()
         self.headers_sent = True
-        self.send_status()
-        self._write(str(self.headers))
+        if not self.origin_server or self.client_is_modern():
+            self.send_preamble()
+            self._write(str(self.headers))
 
 
     def result_is_file(self):
         """True if 'self.result' is an instance of 'self.wsgi_file_wrapper'"""
         wrapper = self.wsgi_file_wrapper
         return wrapper is not None and isinstance(self.result,wrapper)
+
+
+    def client_is_modern(self):
+        """True if client can accept status and headers"""
+        return self.environ['SERVER_PROTOCOL'].upper() != 'HTTP/0.9'
 
 
     def log_exception(self,exc_info):
@@ -308,6 +308,7 @@ class BaseHandler:
             self.finish_response()
         # XXX else: attempt advanced recovery techniques for HTML or text?
 
+
     def error_output(self, environ, start_response):
         """WSGI mini-app to create error output
 
@@ -323,7 +324,6 @@ class BaseHandler:
         """
         start_response(self.error_status, self.error_headers[:])
         return [self.error_body]    
-
 
 
     # Pure abstract methods; *must* be overridden in subclasses
@@ -384,7 +384,7 @@ class BaseCGIHandler(BaseHandler):
     'multiprocess' (defaulting to 'True' and 'False' respectively) to control
     the configuration sent to the application.
     """
-
+    origin_server = False
     wsgi_multithread = False
     wsgi_multiprocess = True
 
@@ -416,9 +416,6 @@ class BaseCGIHandler(BaseHandler):
         self.stdout.flush()
         self._flush = self.stdout.flush
 
-    def send_status(self):
-        self._write('Status: %s\r\n' % self.status)
-
 
 class CGIHandler(BaseCGIHandler):
     """CGI-based invocation via sys.stdin/stdout/stderr and os.environ
@@ -443,6 +440,9 @@ class CGIHandler(BaseCGIHandler):
             self, sys.stdin, sys.stdout, sys.stderr, dict(os.environ.items()),
             multithread=False, multiprocess=True
         )
+
+
+
 
 
 

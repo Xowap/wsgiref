@@ -4,7 +4,7 @@ from wsgiref.util import setup_testing_defaults
 from wsgiref.headers import Headers
 from wsgiref.handlers import BaseHandler, BaseCGIHandler
 from StringIO import StringIO
-
+import re
 
 class ErrorHandler(BaseCGIHandler):
     """Simple handler subclass for testing BaseHandler"""
@@ -162,6 +162,46 @@ class HandlerTests(TestCase):
         self.failUnless(h.stderr.getvalue().find("AssertionError")<>-1)
 
 
+    def testHeaderFormats(self):
+
+        def non_error_app(e,s):
+            s('200 OK',[])
+            return []
+
+        stdpat = (
+            r"HTTP/%s 200 OK\r\n"
+            r"Date: \w{3} \w{3} \d{2} \d\d:\d\d:\d\d \d{4}\r\n"
+            r"%s" r"Content-Length: 0\r\n" r"\r\n"
+        )
+        shortpat = (
+            "Status: 200 OK\r\n" "Content-Length: 0\r\n" "\r\n"
+        )
+
+        for ssw in "FooBar/1.0", None:
+            sw = ssw and "Server: %s\r\n" % ssw or ""
+
+            for version in "1.0", "1.1":           
+                for proto in "HTTP/0.9", "HTTP/1.0", "HTTP/1.1":
+                   
+                    h = TestHandler(SERVER_PROTOCOL=proto)
+                    h.origin_server = False
+                    h.http_version = version
+                    h.server_software = ssw
+                    h.run(non_error_app)
+                    self.assertEqual(shortpat,h.stdout.getvalue())
+                
+                    h = TestHandler(SERVER_PROTOCOL=proto)
+                    h.origin_server = True
+                    h.http_version = version
+                    h.server_software = ssw
+                    h.run(non_error_app)   
+                    if proto=="HTTP/0.9":
+                        self.assertEqual(h.stdout.getvalue(),"")
+                    else:
+                        self.failUnless(
+                            re.match(stdpat%(version,sw), h.stdout.getvalue()),
+                            (stdpat%(version,sw), h.stdout.getvalue())
+                        )
 
 TestClasses = (
     HandlerTests,

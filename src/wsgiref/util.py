@@ -135,6 +135,8 @@ def setup_testing_defaults(environ):
     """
 
     environ.setdefault('SERVER_NAME','127.0.0.1')
+    environ.setdefault('SERVER_PROTOCOL','HTTP/1.0')
+
     environ.setdefault('HTTP_HOST',environ['SERVER_NAME'])
     environ.setdefault('REQUEST_METHOD','GET')
 
@@ -156,6 +158,45 @@ def setup_testing_defaults(environ):
         environ.setdefault('SERVER_PORT', '80')
     elif environ['wsgi.url_scheme']=='https':
         environ.setdefault('SERVER_PORT', '443')
+
+
+
+
+_hoppish = {
+    'connection':1, 'keep-alive':1, 'proxy-authenticate':1,
+    'proxy-authorization':1, 'te':1, 'trailers':1, 'transfer-encoding':1,
+    'upgrade':1
+}.has_key
+
+def is_hop_by_hop(header_name):
+    """Return true if 'header_name' is an HTTP/1.1 "Hop-by-Hop" header"""
+    return _hoppish(header_name.lower())
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

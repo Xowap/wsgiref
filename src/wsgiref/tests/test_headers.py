@@ -2,7 +2,6 @@ from unittest import TestCase, TestSuite, makeSuite
 from wsgiref.headers import Headers
 from wsgiref.tests import compare_generic_iter
 
-
 class HeaderTests(TestCase):
 
     def testMappingInterface(self):
@@ -31,12 +30,13 @@ class HeaderTests(TestCase):
 
         self.assertEqual(h.get("foo","whee"), "baz")
         self.assertEqual(h.get("zoo","whee"), "whee")
+        self.assertEqual(h.setdefault("foo","whee"), "baz")
+        self.assertEqual(h.setdefault("zoo","whee"), "whee")
+        self.assertEqual(h["foo"],"baz")
+        self.assertEqual(h["zoo"],"whee")
 
     def testRequireList(self):
         self.assertRaises(TypeError, Headers, "foo")
-
-
-
 
 
     def testExtras(self):
