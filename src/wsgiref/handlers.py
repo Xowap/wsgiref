@@ -117,8 +117,8 @@ class BaseHandler:
         if self.wsgi_file_wrapper is not None:
             env['wsgi.file_wrapper'] = self.wsgi_file_wrapper
 
-
-
+        if self.origin_server and self.server_software:
+            env.setdefault('SERVER_SOFTWARE',self.server_software)
 
 
     def finish_response(self):
@@ -367,26 +367,18 @@ class BaseHandler:
 
 
 
-class BaseCGIHandler(BaseHandler):
-    """CGI-like systems using input/output/error streams and environ mapping
+class SimpleHandler(BaseHandler):
+    """Handler that's just initialized with streams, environment, etc.
+
+    This handler subclass is intended for synchronous HTTP/1.0 origin servers,
+    and handles sending the entire response output, given the correct inputs.
 
     Usage::
 
-        handler = BaseCGIHandler(inp,out,err,env)
-        handler.run(app)
-
-    This handler class is useful for gateway protocols like ReadyExec and
-    FastCGI, that have usable input/output/error streams and an environment
-    mapping.  It's also the base class for CGIHandler, which just uses
-    sys.stdin, os.environ, and so on.
-
-    The constructor also takes keyword arguments 'multithread' and
-    'multiprocess' (defaulting to 'True' and 'False' respectively) to control
-    the configuration sent to the application.
-    """
-    origin_server = False
-    wsgi_multithread = False
-    wsgi_multiprocess = True
+        handler = BaseCGIHandler(
+            inp,out,err,env, multithread=False, multiprocess=True
+        )
+        handler.run(app)"""
 
     def __init__(self,stdin,stdout,stderr,environ,
         multithread=True, multiprocess=False
@@ -407,7 +399,6 @@ class BaseCGIHandler(BaseHandler):
     def add_cgi_vars(self):
         self.environ.update(self.base_env)
 
-
     def _write(self,data):
         self.stdout.write(data)
         self._write = self.stdout.write
@@ -417,7 +408,49 @@ class BaseCGIHandler(BaseHandler):
         self._flush = self.stdout.flush
 
 
+class BaseCGIHandler(SimpleHandler):
+    
+    """CGI-like systems using input/output/error streams and environ mapping
+
+    Usage::
+
+        handler = BaseCGIHandler(inp,out,err,env)
+        handler.run(app)
+
+    This handler class is useful for gateway protocols like ReadyExec and
+    FastCGI, that have usable input/output/error streams and an environment
+    mapping.  It's also the base class for CGIHandler, which just uses
+    sys.stdin, os.environ, and so on.
+
+    The constructor also takes keyword arguments 'multithread' and
+    'multiprocess' (defaulting to 'True' and 'False' respectively) to control
+    the configuration sent to the application.  It sets 'origin_server' to
+    False (to enable CGI-like output), and assumes that 'wsgi.run_once' is
+    False.
+    """
+
+    origin_server = False
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class CGIHandler(BaseCGIHandler):
+
     """CGI-based invocation via sys.stdin/stdout/stderr and os.environ
 
     Usage::
@@ -440,6 +473,14 @@ class CGIHandler(BaseCGIHandler):
             self, sys.stdin, sys.stdout, sys.stderr, dict(os.environ.items()),
             multithread=False, multiprocess=True
         )
+
+
+
+
+
+
+
+
 
 
 
