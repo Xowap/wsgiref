@@ -1,7 +1,7 @@
 from unittest import TestCase, TestSuite, makeSuite
 from wsgiref import util
+from wsgiref.tests import compare_generic_iter
 from StringIO import StringIO
-
 
 class UtilityTests(TestCase):
 
@@ -12,7 +12,6 @@ class UtilityTests(TestCase):
         self.assertEqual(env['PATH_INFO'],pi_out)
         self.assertEqual(env['SCRIPT_NAME'],sn_out)
         return env
-
 
     def checkDefault(self, key, value, alt=None):
         # Check defaulting when empty
@@ -28,17 +27,6 @@ class UtilityTests(TestCase):
         util.setup_testing_defaults(env)
         self.failUnless(env[key] is alt)
 
-
-
-
-
-
-
-
-
-
-
-
     def checkCrossDefault(self,key,value,**kw):
         util.setup_testing_defaults(kw)
         self.assertEqual(kw[key],value)
@@ -52,32 +40,22 @@ class UtilityTests(TestCase):
         self.assertEqual(util.request_uri(kw,query),uri)
 
     def checkFW(self,text,size,match):
-        sio = StringIO(text)
-        fw = util.FileWrapper(sio,size)
-        n = 0
-        for item in match:
-            self.assertEqual(fw[n],item)
-            n+=1
-        self.assertRaises(IndexError, fw.__getitem__, n)
 
-        try:
-            iter, StopIteration
-        except NameError:
-            pass
-        else:
-            # Only test iter mode under 2.2+
-            sio = StringIO(text)
-            fw = util.FileWrapper(sio,size)
-            self.failUnless(iter(fw) is fw)
-            for item in match:
-                self.assertEqual(fw.next(),item)
-            self.assertRaises(StopIteration, fw.next)
+        def make_it(text=text,size=size):
+            return util.FileWrapper(StringIO(text),size)
 
-        self.failIf(sio.closed)
-        fw.close()
-        self.failUnless(sio.closed)
+        compare_generic_iter(make_it,match)
 
+        it = make_it()
+        self.failIf(it.filelike.closed)
 
+        for item in it:
+            pass        
+
+        self.failIf(it.filelike.closed)
+
+        it.close()
+        self.failUnless(it.filelike.closed)
 
 
     def testSimpleShifts(self):
@@ -86,6 +64,7 @@ class UtilityTests(TestCase):
         self.checkShift('/','', None, '/', '')
         self.checkShift('/a','/x/y', 'x', '/a/x', '/y')
         self.checkShift('/a','/x/',  'x', '/a/x', '/')
+
 
     def testNormalizedShifts(self):
         self.checkShift('/a/b', '/../y', '..', '/a', '/y')
@@ -99,6 +78,7 @@ class UtilityTests(TestCase):
         self.checkShift('/a/b', '/.//', '', '/a/b', '')
         self.checkShift('/a/b', '/x//', 'x', '/a/b/x', '/')
         self.checkShift('/a/b', '/.', None, '/a/b', '')
+
 
     def testDefaults(self):
         for key, value in [
@@ -119,8 +99,6 @@ class UtilityTests(TestCase):
             self.checkDefault(key,value)
 
 
-
-
     def testCrossDefaults(self):
         self.checkCrossDefault('HTTP_HOST',"foo.bar",SERVER_NAME="foo.bar")
         self.checkCrossDefault('wsgi.url_scheme',"https",HTTPS="on")
@@ -130,12 +108,18 @@ class UtilityTests(TestCase):
         self.checkCrossDefault('SERVER_PORT',"80",HTTPS="foo")
         self.checkCrossDefault('SERVER_PORT',"443",HTTPS="on")
 
+
     def testGuessScheme(self):
         self.assertEqual(util.guess_scheme({}), "http")
         self.assertEqual(util.guess_scheme({'HTTPS':"foo"}), "http")
         self.assertEqual(util.guess_scheme({'HTTPS':"on"}), "https")
         self.assertEqual(util.guess_scheme({'HTTPS':"yes"}), "https")
         self.assertEqual(util.guess_scheme({'HTTPS':"1"}), "https")
+
+
+
+
+
 
     def testAppURIs(self):
         self.checkAppURI("http://127.0.0.1/")
@@ -161,6 +145,22 @@ class UtilityTests(TestCase):
 
     def testFileWrapper(self):
         self.checkFW("xyz"*50, 120, ["xyz"*40,"xyz"*10])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 TestClasses = (
     UtilityTests,
