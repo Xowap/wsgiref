@@ -104,7 +104,7 @@ class build_py(_build_py):
         correct installation manifest.)
         """
 
-        return _build_py.get_outputs(include_bytecode) + [
+        return _build_py.get_outputs(self,include_bytecode) + [
             os.path.join(build_dir,filename)
                 for package,src_dir,build_dir,filenames in self.data_files
                     for filename in filenames
