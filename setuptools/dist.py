@@ -4,6 +4,7 @@ from distutils.core import Distribution as _Distribution
 from distutils.core import Extension
 from setuptools.command.build_py import build_py
 from setuptools.command.build_ext import build_ext
+from setuptools.command.install import install
 from distutils.errors import DistutilsOptionError, DistutilsPlatformError
 from distutils.errors import DistutilsSetupError
 sequence = tuple, list
@@ -59,14 +60,14 @@ class Distribution(_Distribution):
         self.features = {}
         self.package_data = {}
         self.test_suite = None
-
+        self.requires = []
         _Distribution.__init__(self,attrs)
         self.cmdclass.setdefault('build_py',build_py)
         self.cmdclass.setdefault('build_ext',build_ext)
+        self.cmdclass.setdefault('install',install)
 
         if self.features:
             self._set_global_opts_from_features()
-
 
     def parse_command_line(self):
         """Process features after parsing command line options"""
@@ -74,7 +75,6 @@ class Distribution(_Distribution):
         if self.features:
             self._finalize_features()
         return result
-
 
     def _feature_attrname(self,name):
         """Convert feature name to corresponding option attribute name"""
@@ -267,7 +267,6 @@ class Distribution(_Distribution):
             else:
                 self._exclude_misc(k,v)
 
-
     def _exclude_packages(self,packages):
         if not isinstance(packages,sequence):
             raise DistutilsSetupError(
@@ -275,13 +274,14 @@ class Distribution(_Distribution):
             )
         map(self.exclude_package, packages)
 
-
     def _parse_command_opts(self, parser, args):
         # Remove --with-X/--without-X options when processing command args
         self.global_options = self.__class__.global_options
         self.negative_opt = self.__class__.negative_opt
         return _Distribution._parse_command_opts(self, parser, args)
 
+    def has_dependencies(self):
+        return not not self.requires
 
 
 

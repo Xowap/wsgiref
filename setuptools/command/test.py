@@ -6,7 +6,7 @@ class test(Command):
 
     """Command to run unit tests after installation"""
 
-    description = "Run unit tests after installation"
+    description = "run unit tests after installation"
 
     user_options = [
         ('test-module=','m', "Run 'test_suite' in specified module"),

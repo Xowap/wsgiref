@@ -1,6 +1,6 @@
 import distutils.command
 
-__all__ = []  # XXX 'happy', 'test', 'install_pkg_data'
+__all__ = ['test', 'depends']
 
 
 # Make our commands available as though they were part of the distutils

@@ -15,16 +15,16 @@ import sys, os.path
 
 def makeSetup(**args):
     """Return distribution from 'setup(**args)', without executing commands"""
+
     distutils.core._setup_stop_after = "commandline"
+
+    # Don't let system command line leak into tests!
+    args.setdefault('script_args',['install'])
+
     try:
         return setuptools.setup(**args)
     finally:
         distutils.core_setup_stop_after = None
-
-
-
-
-
 
 
 
@@ -80,6 +80,14 @@ class DependsTests(TestCase):
             get_module_constant('setuptools.tests','__doc__'),__doc__
         )
 
+    def testDependsCmd(self):
+        dist = makeSetup()
+        cmd = dist.get_command_obj('depends')
+        cmd.ensure_finalized()
+        self.assertEqual(cmd.temp, dist.get_command_obj('build').build_temp)
+        self.assertEqual(cmd.install_lib, dist.get_command_obj('install').install_lib)
+
+
     def testRequire(self):
         req = Require('Distutils','1.0.3','distutils')
 
@@ -110,14 +118,6 @@ class DependsTests(TestCase):
         paths = [os.path.dirname(p) for p in __path__]
         self.failUnless(req.is_present(paths))
         self.failUnless(req.is_current(paths))
-
-
-
-
-
-
-
-
 
 
 

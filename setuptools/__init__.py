@@ -3,12 +3,15 @@
 import distutils.core, setuptools.command
 from setuptools.dist import Distribution, Feature
 from setuptools.extension import Extension
+from setuptools.depends import Require
 from distutils.core import Command
 from distutils.util import convert_path
 import os.path
 
+
 __all__ = [
-    'setup', 'Distribution', 'Feature', 'Command', 'Extension', 'find_packages'
+    'setup', 'Distribution', 'Feature', 'Command', 'Extension', 'Require',
+    'find_packages'
 ]
 
 
