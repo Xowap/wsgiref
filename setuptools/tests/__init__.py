@@ -7,7 +7,11 @@ from distutils.errors import DistutilsSetupError
 import setuptools, setuptools.dist
 from setuptools import Feature
 from distutils.core import Extension
+from setuptools.depends import extract_constant, get_module_constant
+from setuptools.depends import find_module, Require
+from distutils.version import StrictVersion, LooseVersion
 
+import sys, os.path
 
 def makeSetup(**args):
     """Return distribution from 'setup(**args)', without executing commands"""
@@ -28,6 +32,84 @@ def makeSetup(**args):
 
 
 
+
+
+
+
+
+
+
+class DependsTests(TestCase):
+
+    def testExtractConst(self):
+
+        from setuptools.depends import extract_constant
+
+        def f1():
+            global x,y,z
+            x = "test"
+            y = z
+
+        # unrecognized name
+        self.assertEqual(extract_constant(f1.func_code,'q', -1), None)
+
+        # constant assigned
+        self.assertEqual(extract_constant(f1.func_code,'x', -1), "test")
+
+        # expression assigned
+        self.assertEqual(extract_constant(f1.func_code,'y', -1), -1)
+
+        # recognized name, not assigned
+        self.assertEqual(extract_constant(f1.func_code,'z', -1), None)
+
+
+    def testFindModule(self):
+        self.assertRaises(ImportError, find_module, 'no-such.-thing')
+        self.assertRaises(ImportError, find_module, 'setuptools.non-existent')
+        f,p,i = find_module('setuptools.tests'); f.close()
+
+    def testModuleExtract(self):
+        from distutils import __version__
+        self.assertEqual(
+            get_module_constant('distutils','__version__'), __version__
+        )
+        self.assertEqual(
+            get_module_constant('sys','version'), sys.version
+        )
+        self.assertEqual(
+            get_module_constant('setuptools.tests','__doc__'),__doc__
+        )
+
+    def testRequire(self):
+        req = Require('Distutils','1.0.3','distutils')
+
+        self.assertEqual(req.name, 'Distutils')
+        self.assertEqual(req.module, 'distutils')
+        self.assertEqual(req.requested_version, '1.0.3')
+        self.assertEqual(req.attribute, '__version__')
+
+        from distutils import __version__
+        self.assertEqual(req.get_version(), __version__)
+
+        self.failUnless(req.is_present())
+        self.failUnless(req.is_current())
+
+        req = Require('Distutils 3000','03000','distutils',format=LooseVersion)
+        self.failUnless(req.is_present())
+        self.failIf(req.is_current())
+
+        req = Require('Do-what-I-mean','1.0','d-w-i-m')
+        self.failIf(req.is_present())
+        self.failIf(req.is_current())
+
+        req = Require('Tests', None, 'tests')
+        self.assertEqual(req.format, None)
+        self.assertEqual(req.attribute, None)
+        self.assertEqual(req.requested_version, None)
+
+        paths = [os.path.dirname(p) for p in __path__]
+        self.failUnless(req.is_present(paths))
+        self.failUnless(req.is_current(paths))
 
 
 
@@ -285,7 +367,7 @@ class TestCommandTests(TestCase):
 
 
 
-testClasses = (DistroTests, FeatureTests, TestCommandTests)
+testClasses = (DependsTests, DistroTests, FeatureTests, TestCommandTests)
 
 def test_suite():
     return TestSuite([makeSuite(t,'test') for t in testClasses])
