@@ -1,13 +1,15 @@
 """wsgiref -- a WSGI (PEP 333) Reference Library
 
-Contained Modules:
+Current Contents:
 
     * util -- Miscellaneous useful functions and wrappers
 
     * headers -- Manage response headers
 
-    * handler -- base classes for server/gateway implementations
+    * handlers -- base classes for server/gateway implementations
 
+To-Do:
+    
     * server -- a SimpleHTTPServer that supports WSGI
     
     * cgi_gateway -- Run WSGI apps under CGI

@@ -44,7 +44,7 @@ class HandlerTests(TestCase):
     def checkEnvironAttrs(self, handler):
         env = handler.environ
         for attr in [
-            'version','multithread','multiprocess','last_call','file_wrapper'
+            'version','multithread','multiprocess','run_once','file_wrapper'
         ]:
             if attr=='file_wrapper' and handler.wsgi_file_wrapper is None:
                 continue

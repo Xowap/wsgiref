@@ -45,7 +45,7 @@ class BaseHandler:
     wsgi_version = (1,0)
     wsgi_multithread = True
     wsgi_multiprocess = True
-    wsgi_last_call = False
+    wsgi_run_once = False
 
     # os_environ may be overridden at class or instance level, if desired
     os_environ = dict(os.environ.items())   
@@ -89,7 +89,7 @@ class BaseHandler:
         env['wsgi.input']        = self.get_stdin()
         env['wsgi.errors']       = self.get_stderr()
         env['wsgi.version']      = self.wsgi_version
-        env['wsgi.last_call']    = self.wsgi_last_call
+        env['wsgi.run_once']    = self.wsgi_run_once
         env['wsgi.url_scheme']   = self.get_scheme()
         env['wsgi.multithread']  = self.wsgi_multithread
         env['wsgi.multiprocess'] = self.wsgi_multiprocess
@@ -341,8 +341,12 @@ class BaseCGIHandler(BaseHandler):
 class CGIHandler(BaseCGIHandler):
     """CGI-based invocation via sys.stdin/stdout/stderr and os.environ
 
+    Usage::
+
+        CGIHandler().run(app)
+
     The difference between this class and BaseCGIHandler is that it always
-    uses 'wsgi.last_call' of 'True', 'wsgi.multithread' of 'False', and
+    uses 'wsgi.run_once' of 'True', 'wsgi.multithread' of 'False', and
     'wsgi.multiprocess' of 'True'.  It does not take any initialization
     parameters, but always uses 'sys.stdin', 'os.environ', and friends.
 
@@ -350,17 +354,13 @@ class CGIHandler(BaseCGIHandler):
     instead.
     """
 
-    wsgi_last_call = True
+    wsgi_run_once = True
 
     def __init__(self):
         BaseCGIHandler.__init__(
             self, sys.stdin, sys.stdout, sys.stderr, dict(os.environ.items()),
             multithread=False, multiprocess=True
         )
-
-
-
-
 
 
 
