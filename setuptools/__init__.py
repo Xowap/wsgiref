@@ -2,7 +2,8 @@
 
 import distutils.core, setuptools.command
 from setuptools.dist import Distribution, Feature
-from distutils.core import Command, Extension
+from setuptools.extension import Extension
+from distutils.core import Command
 
 __all__ = [
     'setup', 'Distribution', 'Feature', 'Command', 'Extension'

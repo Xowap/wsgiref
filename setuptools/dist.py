@@ -3,6 +3,7 @@ __all__ = ['Distribution', 'Feature']
 from distutils.core import Distribution as _Distribution
 from distutils.core import Extension
 from setuptools.command.build_py import build_py
+from setuptools.command.build_ext import build_ext
 from distutils.errors import DistutilsOptionError, DistutilsPlatformError
 from distutils.errors import DistutilsSetupError
 sequence = tuple, list
@@ -60,8 +61,8 @@ class Distribution(_Distribution):
         self.test_suite = None
 
         _Distribution.__init__(self,attrs)
-
         self.cmdclass.setdefault('build_py',build_py)
+        self.cmdclass.setdefault('build_ext',build_ext)
 
         if self.features:
             self._set_global_opts_from_features()
@@ -78,7 +79,6 @@ class Distribution(_Distribution):
     def _feature_attrname(self,name):
         """Convert feature name to corresponding option attribute name"""
         return 'with_'+name.replace('-','_')
-
 
     def _set_global_opts_from_features(self):
         """Add --with-X/--without-X options based on optional features"""
