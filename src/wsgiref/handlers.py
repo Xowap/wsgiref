@@ -292,13 +292,14 @@ class BaseHandler:
         """
         try:
             from traceback import print_exception
+            stderr = self.get_stderr()
             print_exception(
                 exc_info[0], exc_info[1], exc_info[2],
-                self.traceback_limit, self.get_stderr()
+                self.traceback_limit, stderr
             )
+            stderr.flush()
         finally:
             exc_info = None
-
 
     def handle_error(self):
         """Log current error, and send error output to client if possible"""
@@ -307,7 +308,6 @@ class BaseHandler:
             self.result = self.error_output(self.environ, self.start_response)
             self.finish_response()
         # XXX else: attempt advanced recovery techniques for HTML or text?
-
 
     def error_output(self, environ, start_response):
         """WSGI mini-app to create error output
