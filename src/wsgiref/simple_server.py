@@ -15,7 +15,7 @@ import urllib, sys
 from wsgiref.handlers import SimpleHandler
 
 __version__ = "0.1"
-__all__ = ['WSGIServer','WSGIRequestHandler','DemoService']
+__all__ = ['WSGIServer','WSGIRequestHandler','demo_app']
 
 
 server_version = "WSGIServer/" + __version__
