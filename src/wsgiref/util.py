@@ -57,12 +57,12 @@ def application_uri(environ):
     else:
         url += environ['SERVER_NAME']
 
-    if environ['wsgi.url_scheme'] == 'https':
-        if environ['SERVER_PORT'] != '443':
-           url += ':' + environ['SERVER_PORT']
-    else:
-        if environ['SERVER_PORT'] != '80':
-           url += ':' + environ['SERVER_PORT']
+        if environ['wsgi.url_scheme'] == 'https':
+            if environ['SERVER_PORT'] != '443':
+               url += ':' + environ['SERVER_PORT']
+        else:
+            if environ['SERVER_PORT'] != '80':
+               url += ':' + environ['SERVER_PORT']
 
     url += quote(environ.get('SCRIPT_NAME') or '/')
     return url   

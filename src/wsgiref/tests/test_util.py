@@ -124,14 +124,15 @@ class UtilityTests(TestCase):
     def testAppURIs(self):
         self.checkAppURI("http://127.0.0.1/")
         self.checkAppURI("http://127.0.0.1/spam", SCRIPT_NAME="/spam")
-        self.checkAppURI("http://spam.example.com/",
-            HTTP_HOST="spam.example.com")
+        self.checkAppURI("http://spam.example.com:2071/",
+            HTTP_HOST="spam.example.com:2071", SERVER_PORT="2071")
         self.checkAppURI("http://spam.example.com/",
             SERVER_NAME="spam.example.com")
         self.checkAppURI("http://127.0.0.1/",
             HTTP_HOST="127.0.0.1", SERVER_NAME="spam.example.com")
         self.checkAppURI("https://127.0.0.1/", HTTPS="on")
-        self.checkAppURI("http://127.0.0.1:8000/", SERVER_PORT="8000")
+        self.checkAppURI("http://127.0.0.1:8000/", SERVER_PORT="8000",
+            HTTP_HOST=None)
 
     def testReqURIs(self):
         self.checkReqURI("http://127.0.0.1/")
@@ -160,7 +161,6 @@ class UtilityTests(TestCase):
         ).split():
             for alt in hop, hop.title(), hop.upper(), hop.lower():
                 self.failIf(util.is_hop_by_hop(alt))
-
 
 TestClasses = (
     UtilityTests,
