@@ -5,6 +5,7 @@ from distutils.core import Extension
 from setuptools.command.build_py import build_py
 from setuptools.command.build_ext import build_ext
 from setuptools.command.install import install
+from setuptools.command.install_lib import install_lib
 from distutils.errors import DistutilsOptionError, DistutilsPlatformError
 from distutils.errors import DistutilsSetupError
 sequence = tuple, list
@@ -65,6 +66,7 @@ class Distribution(_Distribution):
         self.cmdclass.setdefault('build_py',build_py)
         self.cmdclass.setdefault('build_ext',build_ext)
         self.cmdclass.setdefault('install',install)
+        self.cmdclass.setdefault('install_lib',install_lib)
 
         if self.features:
             self._set_global_opts_from_features()
