@@ -1,11 +1,12 @@
 from __future__ import nested_scopes    # Backward compat for 2.1
 from unittest import TestCase, TestSuite, makeSuite
 from wsgiref.util import setup_testing_defaults
+from wsgiref.headers import Headers
 from wsgiref.handlers import BaseHandler, BaseCGIHandler
 from StringIO import StringIO
 
 
-class TestHandler(BaseCGIHandler):
+class ErrorHandler(BaseCGIHandler):
     """Simple handler subclass for testing BaseHandler"""
 
     def __init__(self,**kw):
@@ -15,12 +16,11 @@ class TestHandler(BaseCGIHandler):
             multithread=True, multiprocess=True
         )
 
+class TestHandler(ErrorHandler):
+    """Simple handler subclass for testing BaseHandler, w/error passthru"""
+
     def handle_error(self):
         raise   # for testing, we want to see what's happening
-
-
-
-
 
 
 
@@ -83,19 +83,83 @@ class HandlerTests(TestCase):
     def testAbstractMethods(self):
         h = BaseHandler()
         for name in [
-            'handle_error','_flush','get_stdin','get_stderr','add_cgi_vars'
+            '_flush','get_stdin','get_stderr','add_cgi_vars'
         ]:
             self.assertRaises(NotImplementedError, getattr(h,name))
         self.assertRaises(NotImplementedError, h._write, "test")
 
 
-    def testSimpleRun(self):
+    def testContentLength(self):
+        # Demo one reason iteration is better than write()...  ;)
+
+        def trivial_app1(e,s):
+            s('200 OK',[])
+            return [e['wsgi.url_scheme']]
+
+        def trivial_app2(e,s):
+            s('200 OK',[])(e['wsgi.url_scheme'])
+            return []
+
         h = TestHandler()
-        h.run(lambda e,s: [(s('200 OK',[]) or 1) and e['wsgi.url_scheme']])
-        self.assertEqual(h.stdout.getvalue(),"Status: 200 OK\r\n\r\nhttp")
+        h.run(trivial_app1)
+        self.assertEqual(h.stdout.getvalue(),
+            "Status: 200 OK\r\n"
+            "Content-Length: 4\r\n"
+            "\r\n"
+            "http")
+        
+        h = TestHandler()
+        h.run(trivial_app2)
+        self.assertEqual(h.stdout.getvalue(),
+            "Status: 200 OK\r\n"
+            "\r\n"
+            "http")
         
 
 
+
+
+
+
+    def testBasicErrorOutput(self):
+        
+        def non_error_app(e,s):
+            s('200 OK',[])
+            return []
+
+        def error_app(e,s):
+            raise AssertionError("This should be caught by handler")
+
+        h = ErrorHandler()
+        h.run(non_error_app)
+        self.assertEqual(h.stdout.getvalue(),
+            "Status: 200 OK\r\n"
+            "Content-Length: 0\r\n"
+            "\r\n")
+        self.assertEqual(h.stderr.getvalue(),"")
+
+        h = ErrorHandler()
+        h.run(error_app)
+        self.assertEqual(h.stdout.getvalue(),
+            "Status: %s\r\n"
+            "Content-Type: text/plain\r\n"
+            "Content-Length: %d\r\n"
+            "\r\n%s" % (h.error_status,len(h.error_body),h.error_body))
+
+        self.failUnless(h.stderr.getvalue().find("AssertionError")<>-1)
+
+    def testErrorAfterOutput(self):
+        MSG = "Some output has been sent"
+        def error_app(e,s):
+            s("200 OK",[])(MSG)
+            raise AssertionError("This should be caught by handler")
+
+        h = ErrorHandler()
+        h.run(error_app)
+        self.assertEqual(h.stdout.getvalue(),
+            "Status: 200 OK\r\n"
+            "\r\n"+MSG)
+        self.failUnless(h.stderr.getvalue().find("AssertionError")<>-1)
 
 
 

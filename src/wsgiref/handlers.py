@@ -1,3 +1,5 @@
+"""Base classes for server/gateway implementations"""
+
 from types import StringType
 from util import FileWrapper, guess_scheme
 from headers import Headers
@@ -37,47 +39,65 @@ except NameError:
 
 
 
-
-
 class BaseHandler:
     """Manage the invocation of a WSGI application"""
 
+    # Configuration parameters; can override per-subclass or per-instance
     wsgi_version = (1,0)
     wsgi_multithread = True
     wsgi_multiprocess = True
     wsgi_run_once = False
 
-    # os_environ may be overridden at class or instance level, if desired
-    os_environ = dict(os.environ.items())   
+    # os_environ is used to supply configuration from the OS environment:
+    # by default it's a copy of 'os.environ' as of import time, but you can
+    # override this in e.g. your __init__ method.
+    os_environ = dict(os.environ.items())
 
     # Collaborator classes
     wsgi_file_wrapper = FileWrapper     # set to None to disable
     headers_class = Headers             # must be a Headers-like class
 
-    # State variables
+    # Error handling (also per-subclass or per-instance)
+    traceback_limit = None  # Print entire traceback to self.get_stderr()
+    error_status = "500 Dude, this is whack!"
+    error_headers = [('Content-Type','text/plain')]
+    error_body = "A server error occurred.  Please contact the administrator."
+    
+    # State variables (don't mess with these)
     status = result = None
     headers_sent = False
     headers = None
     bytes_sent = 0
 
 
+
+
+
+
+
+
+
+
+
+
     def run(self, application):
         """Invoke the application"""
+        # Note to self: don't move the close()!  Asynchronous servers shouldn't
+        # call close() from finish_response(), so if you close() anywhere but
+        # the double-error branch here, you'll break asynchronous servers by
+        # prematurely closing.  Async servers must return from 'run()' without
+        # closing if there might still be output to iterate over.
         try:
             self.setup_environ()
             self.result = application(self.environ, self.start_response)
             self.finish_response()
         except:
-            self.handle_error()
-            self.close()
-
-
-
-
-
-
-
-
+            try:
+                self.handle_error()
+            except:
+                # If we get an error handling an error, just give up already!
+                self.close()
+                raise   # ...and let the actual server figure it out.
 
 
     def setup_environ(self):
@@ -89,7 +109,7 @@ class BaseHandler:
         env['wsgi.input']        = self.get_stdin()
         env['wsgi.errors']       = self.get_stderr()
         env['wsgi.version']      = self.wsgi_version
-        env['wsgi.run_once']    = self.wsgi_run_once
+        env['wsgi.run_once']     = self.wsgi_run_once
         env['wsgi.url_scheme']   = self.get_scheme()
         env['wsgi.multithread']  = self.wsgi_multithread
         env['wsgi.multiprocess'] = self.wsgi_multiprocess
@@ -98,27 +118,22 @@ class BaseHandler:
             env['wsgi.file_wrapper'] = self.wsgi_file_wrapper
 
 
+
+
+
     def finish_response(self):
         """Send any iterable data, then close self and the iterable
 
         Subclasses intended for use in asynchronous servers will
-        probably want to redefine this method, such that it sets up
-        callbacks to iterate over the data, and to call 'self.close()'
-        when finished.
+        want to redefine this method, such that it sets up callbacks
+        in the event loop to iterate over the data, and to call
+        'self.close()' once the response is finished.
         """
-        try:
-            try:
-                if not self.result_is_file() and not self.sendfile():
-                    for data in self.result:
-                        self.write(data)
-                    self.finish_content()
-            except:
-                self.handle_error()
-        finally:
-            self.close()
-
-
-
+        if not self.result_is_file() and not self.sendfile():
+            for data in self.result:
+                self.write(data)
+            self.finish_content()
+        self.close()
 
 
     def get_scheme(self):
@@ -126,9 +141,25 @@ class BaseHandler:
         return guess_scheme(self.environ)
 
 
+    def set_content_length(self):
+        """Compute Content-Length or switch to chunked encoding if possible"""
+        try:
+            blocks = len(self.result)
+        except (TypeError,AttributeError,NotImplementedError):
+            pass
+        else:
+            if blocks==1:
+                self.headers['Content-Length'] = str(self.bytes_sent)
+                return
+        # XXX Try for chunked encoding if enabled
+        
+
     def cleanup_headers(self):
         """Make any necessary header changes or defaults"""
-        # XXX set up Content-Length, chunked encoding, if possible/needed
+        if not self.headers.has_key('Content-Length'):
+            self.set_content_length()
+
+        # XXX set up Date, Server headers 
 
 
     def start_response(self, status, headers,exc_info=None):
@@ -162,6 +193,16 @@ class BaseHandler:
 
 
 
+
+
+
+
+
+
+
+
+
+
     def write(self, data):
         """'write()' callable as specified by PEP 333"""
 
@@ -171,10 +212,12 @@ class BaseHandler:
              raise AssertionError("write() before start_response()")
 
         elif not self.headers_sent:
-             # Before the first output, send the stored headers
-             self.send_headers()
+            # Before the first output, send the stored headers
+            self.bytes_sent = len(data)    # make sure we know content-length
+            self.send_headers()
+        else:
+            self.bytes_sent += len(data)
 
-        self.bytes_sent += len(data)
         # XXX check Content-Length and truncate if too many bytes written?
         self._write(data)
         self._flush()
@@ -188,19 +231,17 @@ class BaseHandler:
         return iterable ('self.result') is an instance of
         'self.wsgi_file_wrapper'.
 
-        This method should return a true value if it is able to
+        This method should return a true value if it was able to actually
         transmit the wrapped file-like object using a platform-specific
         approach.  It should return a false value if normal iteration
         should be used instead.  An exception can be raised to indicate
         that transmission was attempted, but failed.
 
-        NOTE: this method should call 'self.send_headers()' if it is
-        going to attempt direct transmission, and 'self.headers_sent'
-        is false.
+        NOTE: this method should call 'self.send_headers()' if
+        'self.headers_sent' is false and it is going to attempt direct
+        transmission of the file1.
         """
         return False   # No platform-specific transmission by default
-
-
 
 
     def finish_content(self):
@@ -212,15 +253,16 @@ class BaseHandler:
             pass # XXX check if content-length was too short?
 
     def close(self):
-        """Close the iterable, if needed, and reset all instance vars
+        """Close the iterable (if needed) and reset all instance vars
 
         Subclasses may want to also drop the client connection.
         """
-        if hasattr(self.result,'close'):
-            self.result.close()
-        self.result = self.headers = self.status = self.environ = None
-        self.bytes_sent = 0
-        self.headers_sent = False
+        try:
+            if hasattr(self.result,'close'):
+                self.result.close()
+        finally:
+            self.result = self.headers = self.status = self.environ = None
+            self.bytes_sent = 0; self.headers_sent = False
 
 
     def send_status(self):
@@ -228,7 +270,6 @@ class BaseHandler:
 
         (BaseCGIHandler overrides this to use a "Status:" prefix.)"""
         self._write('%s\r\n' % status)
-
 
     def send_headers(self):
         """Transmit headers to the client, via self._write()"""
@@ -244,19 +285,64 @@ class BaseHandler:
         return wrapper is not None and isinstance(self.result,wrapper)
 
 
-    # Pure abstract methods; *must* be overridden in subclasses
+    def log_exception(self,exc_info):
+        """Log the 'exc_info' tuple in the server log
+
+        Subclasses may override to retarget the output or change its format.
+        """
+        try:
+            from traceback import print_exception
+            print_exception(
+                exc_info[0], exc_info[1], exc_info[2],
+                self.traceback_limit, self.get_stderr()
+            )
+        finally:
+            exc_info = None
+
 
     def handle_error(self):
-        """Override in subclass to handle error recovery and logging"""
-        # XXX this really should do something sensible by default
-        raise NotImplementedError
+        """Log current error, and send error output to client if possible"""
+        self.log_exception(sys.exc_info())
+        if not self.headers_sent:
+            self.result = self.error_output(self.environ, self.start_response)
+            self.finish_response()
+        # XXX else: attempt advanced recovery techniques for HTML or text?
 
+    def error_output(self, environ, start_response):
+        """WSGI mini-app to create error output
+
+        By default, this just uses the 'error_status', 'error_headers',
+        and 'error_body' attributes to generate an output page.  It can
+        be overridden in a subclass to dynamically generate diagnostics,
+        choose an appropriate message for the user's preferred language, etc.
+
+        Note, however, that it's not recommended from a security perspective to
+        spit out diagnostics to any old user; ideally, you should have to do
+        something special to enable diagnostic output, which is why we don't
+        include any here!
+        """
+        start_response(self.error_status, self.error_headers[:])
+        return [self.error_body]    
+
+
+
+    # Pure abstract methods; *must* be overridden in subclasses
+    
     def _write(self,data):
-        """Override in subclass to buffer data for send to client"""
+        """Override in subclass to buffer data for send to client
+
+        It's okay if this method actually transmits the data; BaseHandler
+        just separates write and flush operations for greater efficiency
+        when the underlying system actually has such a distinction.
+        """
         raise NotImplementedError
 
     def _flush(self):
-        """Override in subclass to force sending of recent '_write()' calls"""
+        """Override in subclass to force sending of recent '_write()' calls
+
+        It's okay if this method is a no-op (i.e., if '_write()' actually
+        sends the data.
+        """
         raise NotImplementedError
 
     def get_stdin(self):
@@ -270,10 +356,6 @@ class BaseHandler:
     def add_cgi_vars(self):
         """Override in subclass to insert CGI variables in 'self.environ'"""
         raise NotImplementedError
-
-
-
-
 
 
 
