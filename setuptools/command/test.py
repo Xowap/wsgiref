@@ -44,15 +44,15 @@ class test(Command):
         # Install before testing
         self.run_command('install')
 
-        if self.test_suite and not self.dry_run:
-            import unittest
-            unittest.main(None, None, [unittest.__file__]+self.test_args)
+        if self.test_suite:
+            cmd = ' '.join(self.test_args)
 
-
-
-
-
-
+            if self.dry_run:
+                self.announce('skipping "unittest %s" (dry run)' % cmd)
+            else:
+                self.announce('running "unittest %s"' % cmd)
+                import unittest
+                unittest.main(None, None, [unittest.__file__]+self.test_args)
 
 
 

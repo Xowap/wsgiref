@@ -1,7 +1,13 @@
+"""Tests for the 'setuptools' package"""
+
 from unittest import TestSuite, TestCase, makeSuite
 import distutils.core, distutils.cmd
-from distutils.errors import DistutilsOptionError
+from distutils.errors import DistutilsOptionError, DistutilsPlatformError
+from distutils.errors import DistutilsSetupError
 import setuptools, setuptools.dist
+from setuptools import Feature
+from distutils.core import Extension
+
 
 def makeSetup(**args):
     """Return distribution from 'setup(**args)', without executing commands"""
@@ -12,10 +18,135 @@ def makeSetup(**args):
         distutils.core_setup_stop_after = None
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class DistroTests(TestCase):
 
-    def testDistro(self):
-        self.failUnless(isinstance(makeSetup(),setuptools.dist.Distribution))
+    def setUp(self):
+        self.e1 = Extension('bar.ext',['bar.c'])
+        self.e2 = Extension('c.y', ['y.c'])
+
+        self.dist = makeSetup(
+            packages=['a', 'a.b', 'a.b.c', 'b', 'c'],
+            py_modules=['b.d','x'],
+            ext_modules = (self.e1, self.e2),
+            package_dir = {},
+        )
+
+
+    def testDistroType(self):
+        self.failUnless(isinstance(self.dist,setuptools.dist.Distribution))
+
+
+    def testExcludePackage(self):
+        self.dist.exclude_package('a')
+        self.assertEqual(self.dist.packages, ['b','c'])
+
+        self.dist.exclude_package('b')
+        self.assertEqual(self.dist.packages, ['c'])
+        self.assertEqual(self.dist.py_modules, ['x'])
+        self.assertEqual(self.dist.ext_modules, [self.e1, self.e2])
+
+        self.dist.exclude_package('c')
+        self.assertEqual(self.dist.packages, [])
+        self.assertEqual(self.dist.py_modules, ['x'])
+        self.assertEqual(self.dist.ext_modules, [self.e1])
+
+        # test removals from unspecified options
+        makeSetup().exclude_package('x')
+
+
+
+
+
+
+
+    def testIncludeExclude(self):
+        # remove an extension
+        self.dist.exclude(ext_modules=[self.e1])
+        self.assertEqual(self.dist.ext_modules, [self.e2])
+
+        # add it back in
+        self.dist.include(ext_modules=[self.e1])
+        self.assertEqual(self.dist.ext_modules, [self.e2, self.e1])
+
+        # should not add duplicate
+        self.dist.include(ext_modules=[self.e1])
+        self.assertEqual(self.dist.ext_modules, [self.e2, self.e1])
+
+    def testExcludePackages(self):
+        self.dist.exclude(packages=['c','b','a'])
+        self.assertEqual(self.dist.packages, [])
+        self.assertEqual(self.dist.py_modules, ['x'])
+        self.assertEqual(self.dist.ext_modules, [self.e1])
+
+    def testEmpty(self):
+        dist = makeSetup()
+        dist.include(packages=['a'], py_modules=['b'], ext_modules=[self.e2])
+        dist = makeSetup()
+        dist.exclude(packages=['a'], py_modules=['b'], ext_modules=[self.e2])
+
+    def testContents(self):
+        self.failUnless(self.dist.has_contents_for('a'))
+        self.dist.exclude_package('a')
+        self.failIf(self.dist.has_contents_for('a'))
+
+        self.failUnless(self.dist.has_contents_for('b'))
+        self.dist.exclude_package('b')
+        self.failIf(self.dist.has_contents_for('b'))
+
+        self.failUnless(self.dist.has_contents_for('c'))
+        self.dist.exclude_package('c')
+        self.failIf(self.dist.has_contents_for('c'))
+
+
+
+
+    def testInvalidIncludeExclude(self):
+        self.assertRaises(DistutilsSetupError,
+            self.dist.include, nonexistent_option='x'
+        )
+        self.assertRaises(DistutilsSetupError,
+            self.dist.exclude, nonexistent_option='x'
+        )
+        self.assertRaises(DistutilsSetupError,
+            self.dist.include, packages={'x':'y'}
+        )
+        self.assertRaises(DistutilsSetupError,
+            self.dist.exclude, packages={'x':'y'}
+        )
+        self.assertRaises(DistutilsSetupError,
+            self.dist.include, ext_modules={'x':'y'}
+        )
+        self.assertRaises(DistutilsSetupError,
+            self.dist.exclude, ext_modules={'x':'y'}
+        )
+
+        self.assertRaises(DistutilsSetupError,
+            self.dist.include, package_dir=['q']
+        )
+        self.assertRaises(DistutilsSetupError,
+            self.dist.exclude, package_dir=['q']
+        )
 
 
 
@@ -31,13 +162,87 @@ class DistroTests(TestCase):
 
 
 
+class FeatureTests(TestCase):
+
+    def setUp(self):
+        self.dist = makeSetup(
+            features={
+                'foo': Feature("foo",standard=True,requires='baz'),
+                'bar': Feature("bar",  standard=True, packages=['pkg.bar'],
+                               py_modules=['bar_et'], remove=['bar.ext'],
+                       ),
+                'baz': Feature(
+                        "baz", optional=False, packages=['pkg.baz'],
+                        scripts = ['scripts/baz_it'],
+                        libraries=[('libfoo','foo/foofoo.c')]
+                       ),
+                'dwim': Feature("DWIM", available=False, remove='bazish'),
+            },
+            script_args=['--without-bar', 'install'],
+            packages = ['pkg.bar', 'pkg.foo'],
+            py_modules = ['bar_et', 'bazish'],
+            ext_modules = [Extension('bar.ext',['bar.c'])]
+        )
+
+    def testDefaults(self):
+        self.failIf(
+            Feature(
+                "test",standard=True,remove='x',available=False
+            ).include_by_default()
+        )
+        self.failUnless(
+            Feature("test",standard=True,remove='x').include_by_default()
+        )
+        # Feature must have either kwargs, removes, or requires
+        self.assertRaises(DistutilsSetupError, Feature, "test")
+
+    def testAvailability(self):
+        self.assertRaises(
+            DistutilsPlatformError,
+            self.dist.features['dwim'].include_in, self.dist
+        )
 
 
+    def testFeatureOptions(self):
+        dist = self.dist
+        self.failUnless(
+            ('with-dwim',None,'include DWIM') in dist.global_options
+        )
+        self.failUnless(
+            ('without-dwim',None,'exclude DWIM (default)') in dist.global_options
+        )
+        self.failUnless(
+            ('with-bar',None,'include bar (default)') in dist.global_options
+        )
+        self.failUnless(
+            ('without-bar',None,'exclude bar') in dist.global_options
+        )
+        self.assertEqual(dist.negative_opt['without-foo'],'with-foo')
+        self.assertEqual(dist.negative_opt['without-bar'],'with-bar')
+        self.assertEqual(dist.negative_opt['without-dwim'],'with-dwim')
+        self.failIf('without-baz' in dist.negative_opt)
 
+    def testUseFeatures(self):
+        dist = self.dist
+        self.assertEqual(dist.with_foo,1)
+        self.assertEqual(dist.with_bar,0)
+        self.assertEqual(dist.with_baz,1)
 
+        self.failIf('bar_et' in dist.py_modules)
+        self.failIf('pkg.bar' in dist.packages)
+        self.failUnless('pkg.baz' in dist.packages)
+        self.failUnless('scripts/baz_it' in dist.scripts)
+        self.failUnless(('libfoo','foo/foofoo.c') in dist.libraries)
+        self.assertEqual(dist.ext_modules,[])
 
+        # If we ask for bar, it should fail because we explicitly disabled
+        # it on the command line
+        self.assertRaises(DistutilsOptionError, dist.include_feature, 'bar')
 
-
+    def testFeatureWithInvalidRemove(self):
+        self.assertRaises(
+            SystemExit, makeSetup, features = {'x':Feature('x', remove='y')}
+        )
 
 class TestCommandTests(TestCase):
 
@@ -75,16 +280,16 @@ class TestCommandTests(TestCase):
         ts5 = makeSetup().get_command_obj('test')
         ts5.ensure_finalized()
         self.assertEqual(ts5.test_suite, None)
-        
 
 
 
 
-testClasses = (DistroTests, TestCommandTests)
+
+testClasses = (DistroTests, FeatureTests, TestCommandTests)
 
 def test_suite():
     return TestSuite([makeSuite(t,'test') for t in testClasses])
-    
+
 
 
 
