@@ -8,6 +8,7 @@ from distutils.core import Command
 from distutils.util import convert_path
 import os.path
 
+__version__ = '0.0.1'
 
 __all__ = [
     'setup', 'Distribution', 'Feature', 'Command', 'Extension', 'Require',
@@ -36,6 +37,8 @@ def find_packages(where='.'):
     return out
 
 
+
+
 def setup(**attrs):
     """Do package setup
 
@@ -46,4 +49,34 @@ def setup(**attrs):
     """
     attrs.setdefault("distclass",Distribution)
     return distutils.core.setup(**attrs)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
