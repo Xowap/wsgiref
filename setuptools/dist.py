@@ -101,8 +101,8 @@ class Distribution(_Distribution):
                 go.append(('without-'+name, None, 'exclude '+descr+excdef))
                 no['without-'+name] = 'with-'+name
 
-        self.global_options = go + self.global_options
-        self.negative_opt = no
+        self.global_options = self.feature_options = go + self.global_options
+        self.negative_opt = self.feature_negopt = no
 
     def _finalize_features(self):
         """Add/remove features and resolve dependencies between them"""
@@ -276,11 +276,11 @@ class Distribution(_Distribution):
         map(self.exclude_package, packages)
 
 
-
-
-
-
-
+    def _parse_command_opts(self, parser, args):
+        # Remove --with-X/--without-X options when processing command args
+        self.global_options = self.__class__.global_options
+        self.negative_opt = self.__class__.negative_opt
+        return _Distribution._parse_command_opts(self, parser, args)
 
 
 

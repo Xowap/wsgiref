@@ -4,27 +4,32 @@ import distutils.core, setuptools.command
 from setuptools.dist import Distribution, Feature
 from setuptools.extension import Extension
 from distutils.core import Command
+from distutils.util import convert_path
 import os.path
 
 __all__ = [
-    'setup', 'Distribution', 'Feature', 'Command', 'Extension', 'findPackages'
+    'setup', 'Distribution', 'Feature', 'Command', 'Extension', 'find_packages'
 ]
 
 
-def findPackages(where='.', prefix='', append=None):
-    """List all Python packages found within directory 'where'"""
+def find_packages(where='.'):
+    """Return a list all Python packages found within directory 'where'
+
+    'where' should be supplied as a "cross-platform" (i.e. URL-style) path; it
+    will be converted to the appropriate local path syntax.
+    """
 
     out = []
-    if not append:
-        append = out.append
+    stack=[(convert_path(where), '')]
 
-    for name in os.listdir(where):
-        fn = os.path.join(where,name)
-        if (os.path.isdir(fn) and
-            os.path.isfile(os.path.join(fn,'__init__.py'))
-        ):
-            append(prefix+name)
-            findPackages(fn,prefix+name+'.',append)
+    while stack:
+        where,prefix = stack.pop(0)
+        for name in os.listdir(where):
+            fn = os.path.join(where,name)
+            if (os.path.isdir(fn) and
+                os.path.isfile(os.path.join(fn,'__init__.py'))
+            ):
+                out.append(prefix+name); stack.append((fn,prefix+name+'.'))
     return out
 
 

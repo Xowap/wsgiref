@@ -288,21 +288,21 @@ class FeatureTests(TestCase):
     def testFeatureOptions(self):
         dist = self.dist
         self.failUnless(
-            ('with-dwim',None,'include DWIM') in dist.global_options
+            ('with-dwim',None,'include DWIM') in dist.feature_options
         )
         self.failUnless(
-            ('without-dwim',None,'exclude DWIM (default)') in dist.global_options
+            ('without-dwim',None,'exclude DWIM (default)') in dist.feature_options
         )
         self.failUnless(
-            ('with-bar',None,'include bar (default)') in dist.global_options
+            ('with-bar',None,'include bar (default)') in dist.feature_options
         )
         self.failUnless(
-            ('without-bar',None,'exclude bar') in dist.global_options
+            ('without-bar',None,'exclude bar') in dist.feature_options
         )
-        self.assertEqual(dist.negative_opt['without-foo'],'with-foo')
-        self.assertEqual(dist.negative_opt['without-bar'],'with-bar')
-        self.assertEqual(dist.negative_opt['without-dwim'],'with-dwim')
-        self.failIf('without-baz' in dist.negative_opt)
+        self.assertEqual(dist.feature_negopt['without-foo'],'with-foo')
+        self.assertEqual(dist.feature_negopt['without-bar'],'with-bar')
+        self.assertEqual(dist.feature_negopt['without-dwim'],'with-dwim')
+        self.failIf('without-baz' in dist.feature_negopt)
 
     def testUseFeatures(self):
         dist = self.dist
