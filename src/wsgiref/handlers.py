@@ -322,7 +322,7 @@ class BaseHandler:
         something special to enable diagnostic output, which is why we don't
         include any here!
         """
-        start_response(self.error_status, self.error_headers[:])
+        start_response(self.error_status,self.error_headers[:],sys.exc_info())
         return [self.error_body]    
 
 
