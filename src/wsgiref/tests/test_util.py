@@ -59,7 +59,7 @@ class UtilityTests(TestCase):
 
 
     def testSimpleShifts(self):
-        self.checkShift('','/', '', '', '')
+        self.checkShift('','/', '', '/', '')
         self.checkShift('','/x', 'x', '/x', '')
         self.checkShift('/','', None, '/', '')
         self.checkShift('/a','/x/y', 'x', '/a/x', '/y')
@@ -74,8 +74,8 @@ class UtilityTests(TestCase):
         self.checkShift('/a/b', '/./y', 'y', '/a/b/y', '')
         self.checkShift('/a/b', '/./y/', 'y', '/a/b/y', '/')
         self.checkShift('/a/b', '///./..//y/.//', '..', '/a', '/y/')
-        self.checkShift('/a/b', '///', '', '/a/b', '')
-        self.checkShift('/a/b', '/.//', '', '/a/b', '')
+        self.checkShift('/a/b', '///', '', '/a/b/', '')
+        self.checkShift('/a/b', '/.//', '', '/a/b/', '')
         self.checkShift('/a/b', '/x//', 'x', '/a/b/x', '/')
         self.checkShift('/a/b', '/.', None, '/a/b', '')
 
