@@ -8,10 +8,12 @@ Current Contents:
 
     * handlers -- base classes for server/gateway implementations
 
+    * simple_server -- a simple BaseHTTPServer that supports WSGI
+    
 To-Do:
-    
-    * server -- a SimpleHTTPServer that supports WSGI
-    
+
+    * validate -- validation library and "lint"-like functions
+
     * cgi_gateway -- Run WSGI apps under CGI
 
     * cgi_wrapper -- Run CGI apps under WSGI
