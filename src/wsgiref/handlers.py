@@ -23,17 +23,17 @@ except NameError:
     False = not True
 
 
+# Weekday and month names for HTTP date/time formatting; always English!
+_weekdayname = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+_monthname = [None, # Dummy so we can use 1-based month numbers
+              "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+              "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
-
-
-
-
-
-
-
-
-
-
+def format_date_time(timestamp):
+    year, month, day, hh, mm, ss, wd, y, z = time.gmtime(timestamp)
+    return "%s, %02d %3s %4d %02d:%02d:%02d GMT" % (
+        _weekdayname[wd], day, _monthname[month], year, hh, mm, ss
+    )
 
 
 
@@ -196,7 +196,7 @@ class BaseHandler:
                 self._write('HTTP/%s %s\r\n' % (self.http_version,self.status))
                 if not self.headers.has_key('Date'):
                     self._write(
-                        'Date: %s\r\n' % time.asctime(time.gmtime(time.time()))
+                        'Date: %s\r\n' % format_date_time(time.time())
                     )
                 if self.server_software and not self.headers.has_key('Server'):
                     self._write('Server: %s\r\n' % self.server_software) 
