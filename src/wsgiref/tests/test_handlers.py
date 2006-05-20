@@ -107,14 +107,14 @@ class HandlerTests(TestCase):
             "Content-Length: 4\r\n"
             "\r\n"
             "http")
-        
+
         h = TestHandler()
         h.run(trivial_app2)
         self.assertEqual(h.stdout.getvalue(),
             "Status: 200 OK\r\n"
             "\r\n"
             "http")
-        
+
 
 
 
@@ -122,7 +122,7 @@ class HandlerTests(TestCase):
 
 
     def testBasicErrorOutput(self):
-        
+
         def non_error_app(e,s):
             s('200 OK',[])
             return []
@@ -170,7 +170,7 @@ class HandlerTests(TestCase):
 
         stdpat = (
             r"HTTP/%s 200 OK\r\n"
-            r"Date: \w{3} \w{3} [ 0123]\d \d\d:\d\d:\d\d \d{4}\r\n"
+            r"Date: \w{3}, [ 0123]\d \w{3} \d{4} \d\d:\d\d:\d\d GMT\r\n"
             r"%s" r"Content-Length: 0\r\n" r"\r\n"
         )
         shortpat = (
@@ -180,21 +180,21 @@ class HandlerTests(TestCase):
         for ssw in "FooBar/1.0", None:
             sw = ssw and "Server: %s\r\n" % ssw or ""
 
-            for version in "1.0", "1.1":           
+            for version in "1.0", "1.1":
                 for proto in "HTTP/0.9", "HTTP/1.0", "HTTP/1.1":
-                   
+
                     h = TestHandler(SERVER_PROTOCOL=proto)
                     h.origin_server = False
                     h.http_version = version
                     h.server_software = ssw
                     h.run(non_error_app)
                     self.assertEqual(shortpat,h.stdout.getvalue())
-                
+
                     h = TestHandler(SERVER_PROTOCOL=proto)
                     h.origin_server = True
                     h.http_version = version
                     h.server_software = ssw
-                    h.run(non_error_app)   
+                    h.run(non_error_app)
                     if proto=="HTTP/0.9":
                         self.assertEqual(h.stdout.getvalue(),"")
                     else:
