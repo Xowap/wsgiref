@@ -66,7 +66,7 @@ class BaseHandler:
     error_status = "500 Dude, this is whack!"
     error_headers = [('Content-Type','text/plain')]
     error_body = "A server error occurred.  Please contact the administrator."
-    
+
     # State variables (don't mess with these)
     status = result = None
     headers_sent = False
@@ -129,7 +129,7 @@ class BaseHandler:
         in the event loop to iterate over the data, and to call
         'self.close()' once the response is finished.
         """
-        if not self.result_is_file() and not self.sendfile():
+        if not self.result_is_file() or not self.sendfile():
             for data in self.result:
                 self.write(data)
             self.finish_content()
@@ -152,7 +152,7 @@ class BaseHandler:
                 self.headers['Content-Length'] = str(self.bytes_sent)
                 return
         # XXX Try for chunked encoding if origin server and client is 1.1
-        
+
 
     def cleanup_headers(self):
         """Make any necessary header changes or defaults
@@ -199,7 +199,7 @@ class BaseHandler:
                         'Date: %s\r\n' % format_date_time(time.time())
                     )
                 if self.server_software and not self.headers.has_key('Server'):
-                    self._write('Server: %s\r\n' % self.server_software) 
+                    self._write('Server: %s\r\n' % self.server_software)
         else:
             self._write('Status: %s\r\n' % self.status)
 
@@ -323,11 +323,11 @@ class BaseHandler:
         include any here!
         """
         start_response(self.error_status,self.error_headers[:],sys.exc_info())
-        return [self.error_body]    
+        return [self.error_body]
 
 
     # Pure abstract methods; *must* be overridden in subclasses
-    
+
     def _write(self,data):
         """Override in subclass to buffer data for send to client
 
@@ -409,7 +409,7 @@ class SimpleHandler(BaseHandler):
 
 
 class BaseCGIHandler(SimpleHandler):
-    
+
     """CGI-like systems using input/output/error streams and environ mapping
 
     Usage::
