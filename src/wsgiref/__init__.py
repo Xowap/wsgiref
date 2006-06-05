@@ -2,21 +2,22 @@
 
 Current Contents:
 
-    * util -- Miscellaneous useful functions and wrappers
+* util -- Miscellaneous useful functions and wrappers
 
-    * headers -- Manage response headers
+* headers -- Manage response headers
 
-    * handlers -- base classes for server/gateway implementations
+* handlers -- base classes for server/gateway implementations
 
-    * simple_server -- a simple BaseHTTPServer that supports WSGI
-    
+* simple_server -- a simple BaseHTTPServer that supports WSGI
+
+* validate -- validation wrapper that sits between an app and a server
+  to detect errors in either
+
 To-Do:
 
-    * validate -- validation library and "lint"-like functions
+* cgi_gateway -- Run WSGI apps under CGI (pending a deployment standard)
 
-    * cgi_gateway -- Run WSGI apps under CGI
+* cgi_wrapper -- Run CGI apps under WSGI
 
-    * cgi_wrapper -- Run CGI apps under WSGI
-
-    * router -- a simple middleware component that handles URL traversal
+* router -- a simple middleware component that handles URL traversal
 """
