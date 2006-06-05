@@ -16,7 +16,7 @@ class FileWrapper:
         self.blksize = blksize
         if hasattr(filelike,'close'):
             self.close = filelike.close
-            
+
     def __getitem__(self,key):
         data = self.filelike.read(self.blksize)
         if data:
@@ -25,7 +25,7 @@ class FileWrapper:
 
     def __iter__(self):
         return self
-        
+
     def next(self):
         data = self.filelike.read(self.blksize)
         if data:
@@ -46,7 +46,7 @@ def guess_scheme(environ):
         return 'https'
     else:
         return 'http'
-           
+
 def application_uri(environ):
     """Return the application's base URI (no PATH_INFO or QUERY_STRING)"""
     url = environ['wsgi.url_scheme']+'://'
@@ -65,9 +65,9 @@ def application_uri(environ):
                url += ':' + environ['SERVER_PORT']
 
     url += quote(environ.get('SCRIPT_NAME') or '/')
-    return url   
+    return url
 
-def request_uri(environ,include_query=1):
+def request_uri(environ, include_query=1):
     """Return the full request URI, optionally including the query string"""
     url = application_uri(environ)
     from urllib import quote
@@ -172,7 +172,7 @@ def is_hop_by_hop(header_name):
     """Return true if 'header_name' is an HTTP/1.1 "Hop-by-Hop" header"""
     return _hoppish(header_name.lower())
 
-    
+
 
 
 
