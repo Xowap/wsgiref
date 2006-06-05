@@ -23,7 +23,6 @@ setup(
     url="http://www.python.org/peps/pep-0333.html",
 
     test_suite  = 'wsgiref.tests.test_suite',
-    package_dir = {'':'src'},
-    packages    = find_packages('src'),
+    packages    = ['wsgiref'],
 )
 
