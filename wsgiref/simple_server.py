@@ -15,7 +15,7 @@ import urllib, sys
 from wsgiref.handlers import SimpleHandler
 
 __version__ = "0.1"
-__all__ = ['WSGIServer','WSGIRequestHandler','demo_app']
+__all__ = ['WSGIServer', 'WSGIRequestHandler', 'demo_app', 'make_server']
 
 
 server_version = "WSGIServer/" + __version__
@@ -35,7 +35,7 @@ class ServerHandler(SimpleHandler):
         finally:
             SimpleHandler.close(self)
 
-        
+
 
 
 
@@ -174,23 +174,23 @@ def demo_app(environ,start_response):
     return [stdout.getvalue()]
 
 
+def make_server(
+    host, port, app, server_class=WSGIServer, handler_class=WSGIRequestHandler
+):
+    """Create a new WSGI server listening on `host` and `port` for `app`"""
+    server = server_class((host, port), handler_class)
+    server.set_app(app)
+    return server
+
+
 if __name__ == '__main__':
     server_address = ('', 8000)
-    httpd = WSGIServer(server_address, WSGIRequestHandler)
-    httpd.set_app(demo_app)
+    httpd = make_server('', 8000, demo_app)
     sa = httpd.socket.getsockname()
     print "Serving HTTP on", sa[0], "port", sa[1], "..."
     import webbrowser
     webbrowser.open('http://localhost:8000/xyz?abc')
     httpd.handle_request()  # serve one request, then exit
-
-
-
-
-
-
-
-
 
 
 

@@ -4,18 +4,59 @@ from wsgiref.util import setup_testing_defaults
 from wsgiref.headers import Headers
 from wsgiref.handlers import BaseHandler, BaseCGIHandler
 from wsgiref import util
+from wsgiref.validate import middleware
+from wsgiref.simple_server import WSGIServer, WSGIRequestHandler, demo_app
+from wsgiref.simple_server import make_server
 from StringIO import StringIO
-import re
+from SocketServer import BaseServer
+import re, sys
+
+
+class MockServer(WSGIServer):
+    """Non-socket HTTP server"""
+
+    def __init__(self, server_address, RequestHandlerClass):
+        BaseServer.__init__(self, server_address, RequestHandlerClass)
+        self.server_bind()
+
+    def server_bind(self):
+        host, port = self.server_address
+        self.server_name = host
+        self.server_port = port
+        self.setup_environ()
+
+
+class MockHandler(WSGIRequestHandler):
+    """Non-socket HTTP handler"""
+    def setup(self):
+        self.connection = self.request
+        self.rfile, self.wfile = self.connection
+
+    def finish(self):
+        pass
 
 
 
 
 
+def hello_app(environ,start_response):
+    start_response("200 OK", [
+        ('Content-Type','text/plain'),
+        ('Date','Mon, 05 Jun 2006 18:49:54 GMT')
+    ])
+    return ["Hello, world!"]
 
+def run_amock(app=hello_app, data="GET / HTTP/1.0\n\n"):
+    server = make_server("", 80, app, MockServer, MockHandler)
+    inp, out, err, olderr = StringIO(data), StringIO(), StringIO(), sys.stderr
+    sys.stderr = err
 
+    try:
+        server.finish_request((inp,out), ("127.0.0.1",8888))
+    finally:
+        sys.stderr = olderr
 
-
-
+    return out.getvalue(), err.getvalue()
 
 
 
@@ -74,6 +115,47 @@ def compare_generic_iter(make_it,match):
             pass
         else:
             raise AssertionError("Too many items from .next()",it)
+
+
+
+
+
+
+class IntegrationTests(TestCase):
+
+    def check_hello(self, out, has_length=True):
+        self.assertEqual(out,
+            "HTTP/1.0 200 OK\r\n"
+            "Server: WSGIServer/0.1 Python/"+sys.version.split()[0]+"\r\n"
+            "Content-Type: text/plain\r\n"
+            "Date: Mon, 05 Jun 2006 18:49:54 GMT\r\n" +
+            (has_length and  "Content-Length: 13\r\n" or "") +
+            "\r\n"
+            "Hello, world!"
+        )
+
+    def test_plain_hello(self):
+        out, err = run_amock()
+        self.check_hello(out)
+
+    def test_validated_hello(self):
+        out, err = run_amock(middleware(hello_app))
+        # the middleware doesn't support len(), so content-length isn't there
+        self.check_hello(out, has_length=False)
+
+    def test_simple_validation_error(self):
+        def bad_app(environ,start_response):
+            start_response("200 OK", ('Content-Type','text/plain'))
+            return ["Hello, world!"]
+        out, err = run_amock(middleware(bad_app))
+        self.failUnless(out.endswith(
+            "A server error occurred.  Please contact the administrator."
+        ))
+        self.assertEqual(
+            err.splitlines()[-2],
+            "AssertionError: Headers (('Content-Type', 'text/plain')) must"
+            " be of type list: <type 'tuple'>"
+        )
 
 
 
@@ -300,32 +382,6 @@ class HeaderTests(TestCase):
         )
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 class ErrorHandler(BaseCGIHandler):
     """Simple handler subclass for testing BaseHandler"""
 
@@ -341,21 +397,6 @@ class TestHandler(ErrorHandler):
 
     def handle_error(self):
         raise   # for testing, we want to see what's happening
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
