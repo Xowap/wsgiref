@@ -22,7 +22,7 @@ setup(
 
     url="http://www.python.org/peps/pep-0333.html",
 
-    test_suite  = 'wsgiref.tests.test_suite',
+    test_suite  = 'test_wsgiref',
     packages    = ['wsgiref'],
 )
 
