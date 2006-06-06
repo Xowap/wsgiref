@@ -328,8 +328,8 @@ instances.
 
 \begin{classdesc}{WSGIRequestHandler}{request, client_address, server}
 Create an HTTP handler for the given \var{request} (i.e. a socket),
-\var{client_address} (a \code{(host,port)} tuple), and \var{server}
-(\class{WSGIServer} instance).
+\var{client_address} (a \code{(\var{host},\var{port})} tuple), and
+\var{server} (\class{WSGIServer} instance).
 
 You do not need to create instances of this class directly; they are
 automatically created as needed by \class{WSGIServer} objects.  You
@@ -369,7 +369,6 @@ WSGI application interface.
 
 \subsection{\module{wsgiref.validate} -- WSGI conformance checker}
 \declaremodule{}{wsgiref.validate}
-
 When creating new WSGI application objects, frameworks, servers, or
 middleware, it can be useful to validate the new code's conformance
 using \module{wsgiref.validate}.  This module provides a function that
@@ -382,6 +381,9 @@ an absence of errors from this module does not necessarily mean that
 errors do not exist.  However, if this module does produce an error,
 then it is virtually certain that either the server or application is
 not 100\% compliant.
+
+This module is based on the \module{paste.lint} module from Ian
+Bicking's ``Python Paste'' library.
 
 \begin{funcdesc}{validator}{application}
 Wrap \var{application} and return a new WSGI application object.  The
@@ -405,8 +407,6 @@ command-line options or the \module{warnings} API, any such warnings
 will be written to \code{sys.stderr} (NOT \code{wsgi.errors}, unless
 they happen to be the same object).
 \end{funcdesc}
-
-
 
 \subsection{\module{wsgiref.handlers} -- server/gateway base classes}
 \declaremodule{}{wsgiref.handlers}
@@ -449,7 +449,6 @@ to subclass this instead of \class{SimpleHandler}.
 
 
 
-
 \begin{classdesc}{SimpleHandler}{stdin, stdout, stderr, environ
 \optional{,multithread=True \optional{, multiprocess=False}}}
 
@@ -467,10 +466,283 @@ the \member{stdin}, \member{stdout}, \member{stderr}, and
 \end{classdesc}
 
 \begin{classdesc}{BaseHandler}{}
-This is an abstract base class for running WSGI applications.
+This is an abstract base class for running WSGI applications.  Each
+instance a single HTTP request, although in principle you could create
+a subclass that was reusable for multiple requests.
 
-XXX lots of stuff here  :(
+\class{BaseHandler} instances have only one method intended for external
+use:
+
+\begin{methoddesc}{run}{app}
+Run the specified WSGI application, \var{app}.
+\end{methoddesc}
+
+All of the other \class{BaseHandler} methods are invoked by this method
+in the process of running the application, and thus exist primarily to
+allow customizing the process.
+
+The following methods MUST be overridden in a subclass:
+
+\begin{methoddesc}{_write}{data}
+Buffer the string \var{data} for transmission to the client.  It's okay
+if this method actually transmits the data; \class{BaseHandler}
+just separates write and flush operations for greater efficiency
+when the underlying system actually has such a distinction.
+\end{methoddesc}
+
+\begin{methoddesc}{_flush}{}
+Force buffered data to be transmitted to the client.  It's okay if this
+method is a no-op (i.e., if \method{_write()} actually sends the data).
+\end{methoddesc}
+
+\begin{methoddesc}{get_stdin}{}
+Return an input stream object suitable for use as the \code{wsgi.input}
+of the request currently being processed.
+\end{methoddesc}
+
+\begin{methoddesc}{get_stderr}{}
+Return an output stream object suitable for use as the
+\code{wsgi.errors} of the request currently being processed.
+\end{methoddesc}
+
+\begin{methoddesc}{add_cgi_vars}{}
+Insert CGI variables for the current request into the \member{environ}
+attribute.
+\end{methoddesc}
+
+Here are some other methods and attributes you may wish to override.
+This list is only a summary, however, and does not include every method
+that can be overridden.  You should consult the docstrings and source
+code for additional information before attempting to create a customized
+\class{BaseHandler} subclass.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Attributes and methods for customizing the WSGI environment:
+
+\begin{memberdesc}{wsgi_multithread}
+The value to be used for the \code{wsgi.multithread} environment
+variable.  It defaults to true in \class{BaseHandler}, but may have
+a different default (or be set by the constructor) in the other
+subclasses.
+\end{memberdesc}
+
+\begin{memberdesc}{wsgi_multiprocess}
+The value to be used for the \code{wsgi.multiprocess} environment
+variable.  It defaults to true in \class{BaseHandler}, but may have
+a different default (or be set by the constructor) in the other
+subclasses.
+\end{memberdesc}
+
+\begin{memberdesc}{wsgi_run_once}
+The value to be used for the \code{wsgi.run_once} environment
+variable.  It defaults to false in \class{BaseHandler}, but
+\class{CGIHandler} sets it to true by default.
+\end{memberdesc}
+
+\begin{memberdesc}{os_environ}
+The default environment variables to be included in every request's
+WSGI environment.  By default, this is a copy of \var{os.environ} at the
+time that \module{wsgiref.handlers} was imported, but subclasses can
+either create their own at the class or instance level.  Note that the
+dictionary should be considered read-only, since the default value is
+shared between multiple classes and instances.
+\end{memberdesc}
+
+\begin{memberdesc}{server_software}
+If the \member{origin_server} attribute is set, this attribute's value
+is used to set the default \code{SERVER_SOFTWARE} WSGI environment
+variable, and also to set a default \code{Server:} header in HTTP
+responses.  It is ignored for handlers (such as \class{BaseCGIHandler}
+and \class{CGIHandler}) that are not HTTP origin servers.
+\end{memberdesc}
+
+
+
+\begin{methoddesc}{get_scheme}{}
+Return the URL scheme being used for the current request.  The default
+implementation uses the \function{guess_scheme()} function from
+\module{wsgiref.util} to guess whether the scheme should be ``http'' or
+``https'', based on the current request's \member{environ} variables.
+\end{methoddesc}
+
+\begin{methoddesc}{setup_environ}{}
+Set the \member{environ} attribute to a fully-populated WSGI
+environment.  The default implementation uses all of the above methods
+and attributes, plus the \method{get_stdin()}, \method{get_stderr()},
+and \method{add_cgi_vars()} methods and the \member{wsgi_file_wrapper}
+attribute.  It also inserts a \code{SERVER_SOFTWARE} key if not present,
+as long as the \member{origin_server} attribute is a true value and the
+\member{server_software} attribute is set.
+\end{methoddesc}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Methods and attributes for customizing exception handling:
+
+\begin{methoddesc}{log_exception}{exc_info}
+Log the \var{exc_info} tuple in the server log.  \var{exc_info} is a
+\code{(\var{type}, \var{value}, \var{traceback})} tuple.  The default
+implementation simply writes the traceback to the request's
+\var{wsgi.errors} stream and flushes it.  Subclasses can override this
+method to change the format or retarget the output, mail the traceback
+to an administrator, or whatever other action may be deemed suitable.
+\end{methoddesc}
+
+\begin{memberdesc}{traceback_limit}
+The maximum number of frames to include in tracebacks output by the
+default \method{log_exception()} method.  If \code{None}, all frames
+are included.
+\end{memberdesc}
+
+\begin{methoddesc}{error_output}{environ, start_response}
+This method is a WSGI application to generate an error page for the
+user.  It is only invoked if an error occurs before headers are sent
+to the client.
+
+This method can access the current error information using
+\code{sys.exc_info()}, and should pass that information to
+\var{start_response} when calling it (as described in the ``Error
+Handling'' section of \pep{333}).
+
+The default implementation just uses the \member{error_status},
+\member{error_headers}, and \member{error_body} attributes to generate
+an output page.  Subclasses can override this to produce more dynamic
+error output.
+
+Note, however, that it's not recommended from a security perspective to
+spit out diagnostics to any old user; ideally, you should have to do
+something special to enable diagnostic output, which is why the default
+implementation doesn't include any.
+\end{methoddesc}
+
+
+
+
+\begin{memberdesc}{error_status}
+The HTTP status used for error responses.  This should be a status
+string as defined in \pep{333}; it defaults to a 500 code and message.
+\end{memberdesc}
+
+\begin{memberdesc}{error_headers}
+The HTTP headers used for error responses.  This should be a list of
+WSGI response headers (\code{(\var{name}, \var{value})} tuples), as
+described in \pep{333}.  The default list just sets the content type
+to \code{text/plain}.
+\end{memberdesc}
+
+\begin{memberdesc}{error_body}
+The error response body.  This should be an HTTP response body string.
+It defaults to the plain text, ``A server error occurred.  Please
+contact the administrator.''
+\end{memberdesc}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Methods and attributes for \pep{333}'s ``Optional Platform-Specific File
+Handling'' feature:
+
+\begin{memberdesc}{wsgi_file_wrapper}
+A \code{wsgi.file_wrapper} factory, or \code{None}.  The default value
+of this attribute is the \class{FileWrapper} class from
+\module{wsgiref.util}.
+\end{memberdesc}
+
+\begin{methoddesc}{sendfile}{}
+Override to implement platform-specific file transmission.  This method
+is called only if the application's return value is an instance of
+the class specified by the \member{wsgi_file_wrapper} attribute.  It
+should return a true value if it was able to successfully transmit the
+file, so that the default transmission code will not be executed.
+The default implementation of this method just returns a false value.
+\end{methoddesc}
+
+
+Miscellaneous methods and attributes:
+
+\begin{memberdesc}{origin_server}
+This attribute should be set to a true value if the handler's
+\method{_write()} and \method{_flush()} are being used to communicate
+directly to the client, rather than via a CGI-like gateway protocol that
+wants the HTTP status in a special \code{Status:} header.
+
+This attribute's default value is true in \class{BaseHandler}, but
+false in \class{BaseCGIHandler} and \class{CGIHandler}.
+\end{memberdesc}
+
+\begin{memberdesc}{http_version}
+If \member{origin_server} is true, this string attribute is used to
+set the HTTP version of the response set to the client.  It defaults to
+\code{"1.0"}.
+\end{memberdesc}
+
+
+
+
+
 \end{classdesc}
+
+
+
+
+
+
 
 
 

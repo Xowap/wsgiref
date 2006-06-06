@@ -239,7 +239,7 @@ class BaseHandler:
 
         NOTE: this method should call 'self.send_headers()' if
         'self.headers_sent' is false and it is going to attempt direct
-        transmission of the file1.
+        transmission of the file.
         """
         return False   # No platform-specific transmission by default
 
