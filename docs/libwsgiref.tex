@@ -370,51 +370,107 @@ WSGI application interface.
 \subsection{\module{wsgiref.validate} -- WSGI conformance checker}
 \declaremodule{}{wsgiref.validate}
 
-\begin{funcdesc}{middleware}{application}
+When creating new WSGI application objects, frameworks, servers, or
+middleware, it can be useful to validate the new code's conformance
+using \module{wsgiref.validate}.  This module provides a function that
+creates WSGI application objects that validate communications between
+a WSGI server or gateway and a WSGI application object, to check both
+sides for protocol conformance.
+
+Note that this utility does not guarantee complete \pep{333} compliance;
+an absence of errors from this module does not necessarily mean that
+errors do not exist.  However, if this module does produce an error,
+then it is virtually certain that either the server or application is
+not 100\% compliant.
+
+\begin{funcdesc}{validator}{application}
+Wrap \var{application} and return a new WSGI application object.  The
+returned application will forward all requests to the original
+\var{application}, and will check that both the \var{application} and
+the server invoking it are conforming to the WSGI specification and to
+RFC 2616.
+
+Any detected nonconformance results in an AssertionError being raised;
+note, however, that how these errors are handled is server-dependent.
+For example, \module{wsgiref.simple_server} and other servers based on
+\module{wsgiref.handlers} (that don't override the error handling
+methods to do something else) will simply output a message that an error
+has occurred, and dump the traceback to \code{sys.stderr} or some other
+error stream.
+
+This wrapper may also generate output using the \module{warnings} module
+to indicate behaviors that are questionable but which may not actually
+be prohibited by \pep{333}.  Unless they are suppressed using Python
+command-line options or the \module{warnings} API, any such warnings
+will be written to \code{sys.stderr} (NOT \code{wsgi.errors}, unless
+they happen to be the same object).
 \end{funcdesc}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
 \subsection{\module{wsgiref.handlers} -- server/gateway base classes}
 \declaremodule{}{wsgiref.handlers}
 
+This module provides base handler classes for implementing WSGI servers
+and gateways.  These base classes handle most of the work of
+communicating with a WSGI application, as long as they are given a
+CGI-like environment, along with input, output, and error streams.
+
+
+\begin{classdesc}{CGIHandler}{}
+CGI-based invocation via \code{sys.stdin}, \code{sys.stdout},
+\code{sys.stderr} and \code{os.environ}.  This is useful when you have
+a WSGI application and want to run it as a CGI script.  Simply invoke
+\code{CGIHandler().run(app)}, where \code{app} is the WSGI application
+object you wish to invoke.
+
+This class is a subclass of \class{BaseCGIHandler} that sets
+\code{wsgi.run_once} to true, \code{wsgi.multithread} to false, and
+\code{wsgi.multiprocess} to true, and always uses \module{sys} and
+\module{os} to obtain the necessary CGI streams and environment.
+\end{classdesc}
+
+
+\begin{classdesc}{BaseCGIHandler}{stdin, stdout, stderr, environ
+\optional{,multithread=True \optional{, multiprocess=False}}}
+
+Similar to \class{CGIHandler}, but instead of using the \module{sys} and
+\module{os} modules, the CGI environment and I/O streams are specified
+explicitly.  The \var{multithread} and \var{multiprocess} values are
+used to set the \code{wsgi.multithread} and \code{wsgi.multiprocess}
+flags for any applications run by the handler instance.
+
+This class is a subclass of \class{SimpleHandler} intended for use with
+software other than HTTP ``origin servers''.  If you are writing a
+gateway protocol implementation (such as CGI, FastCGI, SCGI, etc.) that
+uses a \code{Status:} header to send an HTTP status, you probably want
+to subclass this instead of \class{SimpleHandler}.
+\end{classdesc}
 
 
 
 
+\begin{classdesc}{SimpleHandler}{stdin, stdout, stderr, environ
+\optional{,multithread=True \optional{, multiprocess=False}}}
+
+Similar to \class{BaseCGIHandler}, but designed for use with HTTP origin
+servers.  If you are writing an HTTP server implementation, you will
+probably want to subclass this instead of \class{BaseCGIHandler}
+
+This class is a subclass of \class{BaseHandler}.  It overrides the
+\method{__init__()}, \method{get_stdin()}, \method{get_stderr()},
+\method{add_cgi_vars()}, \method{_write()}, and \method{_flush()}
+methods to support explicitly setting the environment and streams via
+the constructor.  The supplied environment and streams are stored in
+the \member{stdin}, \member{stdout}, \member{stderr}, and
+\member{environ} attributes.
+\end{classdesc}
+
+\begin{classdesc}{BaseHandler}{}
+This is an abstract base class for running WSGI applications.
+
+XXX lots of stuff here  :(
+\end{classdesc}
 
 
 

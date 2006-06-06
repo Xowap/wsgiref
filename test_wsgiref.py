@@ -4,7 +4,7 @@ from wsgiref.util import setup_testing_defaults
 from wsgiref.headers import Headers
 from wsgiref.handlers import BaseHandler, BaseCGIHandler
 from wsgiref import util
-from wsgiref.validate import middleware
+from wsgiref.validate import validator
 from wsgiref.simple_server import WSGIServer, WSGIRequestHandler, demo_app
 from wsgiref.simple_server import make_server
 from StringIO import StringIO
@@ -139,7 +139,7 @@ class IntegrationTests(TestCase):
         self.check_hello(out)
 
     def test_validated_hello(self):
-        out, err = run_amock(middleware(hello_app))
+        out, err = run_amock(validator(hello_app))
         # the middleware doesn't support len(), so content-length isn't there
         self.check_hello(out, has_length=False)
 
@@ -147,7 +147,7 @@ class IntegrationTests(TestCase):
         def bad_app(environ,start_response):
             start_response("200 OK", ('Content-Type','text/plain'))
             return ["Hello, world!"]
-        out, err = run_amock(middleware(bad_app))
+        out, err = run_amock(validator(bad_app))
         self.failUnless(out.endswith(
             "A server error occurred.  Please contact the administrator."
         ))

@@ -6,6 +6,8 @@ from headers import Headers
 
 import sys, os, time
 
+__all__ = ['BaseHandler', 'SimpleHandler', 'BaseCGIHandler', 'CGIHandler']
+
 try:
     dict
 except NameError:
@@ -34,8 +36,6 @@ def format_date_time(timestamp):
     return "%s, %02d %3s %4d %02d:%02d:%02d GMT" % (
         _weekdayname[wd], day, _monthname[month], year, hh, mm, ss
     )
-
-
 
 
 
@@ -375,7 +375,7 @@ class SimpleHandler(BaseHandler):
 
     Usage::
 
-        handler = BaseCGIHandler(
+        handler = SimpleHandler(
             inp,out,err,env, multithread=False, multiprocess=True
         )
         handler.run(app)"""

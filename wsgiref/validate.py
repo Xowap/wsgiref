@@ -108,7 +108,7 @@ Some of the things this checks:
     sys.stderr, because we only know it isn't called when the object
     is garbage collected).
 """
-__all__ = ['middleware']
+__all__ = ['validator']
 
 
 import re
@@ -124,7 +124,7 @@ class WSGIWarning(Warning):
     Raised in response to WSGI-spec-related warnings
     """
 
-def middleware(application):
+def validator(application):
 
     """
     When applied between a WSGI server and a WSGI application, this
