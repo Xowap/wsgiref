@@ -1,4 +1,5 @@
-\section{\module{wsgiref} --- WSGI Utilities and Reference Implementation}
+\section{\module{wsgiref} --- WSGI Utilities and Reference
+Implementation}
 \declaremodule{}{wsgiref}
 \moduleauthor{Phillip J. Eby}{pje@telecommunity.com}
 \sectionauthor{Phillip J. Eby}{pje@telecommunity.com}
@@ -24,7 +25,6 @@ WSGI specification (\pep{333}).
 
 % XXX If you're just trying to write a web application...
 % XXX should create a URL on python.org to point people to.
-
 
 
 
@@ -223,35 +223,61 @@ empty list.
 Add a (possibly multi-valued) header, with optional MIME parameters
 specified via keyword arguments.
 
-_name is the header field to add.  keyword arguments can be used to set
-additional parameters for the header field, with underscores converted
-to dashes.  Normally the parameter will be added as key="value" unless
-value is None, in which case only the key will be added.
+\var{name} is the header field to add.  Keyword arguments can be used to
+set MIME parameters for the header field.  Each parameter must be a
+string or \code{None}.  Underscores in parameter names are converted to
+dashes, since dashes are illegal in Python identifiers, but many MIME
+parameter names include dashes.  If the parameter value is a string, it
+is added to the header value parameters in the form \code{name="value"}.
+If it is \code{None}, only the parameter name is added.  (This is used
+for MIME parameters without a value.)  Example usage:
 
-Example:
-
+\begin{verbatim}
 h.add_header('content-disposition', 'attachment', filename='bud.gif')
+\end{verbatim}
 
-Note that unlike the corresponding 'email.Message' method, this does
-*not* handle '(charset, language, value)' tuples: all values must be
-strings or None.
+The above will add a header that looks like this:
+
+\begin{verbatim}
+Content-Disposition: attachment; filename="bud.gif"
+\end{verbatim}
 \end{methoddesc}
-
 \end{classdesc}
-
-
-
-
-
 
 \subsection{\module{wsgiref.simple_server} -- a simple WSGI HTTP server}
 \declaremodule[wsgiref.simpleserver]{}{wsgiref.simple_server}
 
-\begin{funcdesc}{demo_app}{environ, start_response}
-This function is a small but complete WSGI application that
-returns a text page containing the message ``Hello world!''
-and a list of the key/value pairs provided in the
-\var{environ} parameter.
+This module implements a simple HTTP server (based on
+\module{BaseHTTPServer}) that serves WSGI applications.  Each server
+instance serves a single WSGI application on a given host and port.  If
+you want to serve multiple applications on a single host and port, you
+should create a WSGI application that parses \code{PATH_INFO} to select
+which application to invoke for each request.  (E.g., using the
+\function{shift_path_info()} function from \module{wsgiref.util}.)
+
+
+\begin{funcdesc}{make_server}{host, port, app
+\optional{, server_class=\class{WSGIServer} \optional{,
+handler_class=\class{WSGIRequestHandler}}}}
+Create a new WSGI server listening on \var{host} and \var{port},
+accepting connections for \var{app}.  The return value is an instance of
+the supplied \var{server_class}, and will process requests using the
+specified \var{handler_class}.  \var{app} must be a WSGI application
+object, as defined by \pep{333}.
+
+Example usage:
+\begin{verbatim}from wsgiref.simple_server import make_server, demo_app
+
+httpd = make_server('', 8000, demo_app)
+print "Serving HTTP on port 8000..."
+
+# Respond to requests until process is killed
+httpd.serve_forever()
+
+# Alternative: serve one request, then exit
+##httpd.handle_request()
+\end{verbatim}
+
 \end{funcdesc}
 
 
@@ -259,23 +285,79 @@ and a list of the key/value pairs provided in the
 
 
 
+\begin{funcdesc}{demo_app}{environ, start_response}
+This function is a small but complete WSGI application that
+returns a text page containing the message ``Hello world!''
+and a list of the key/value pairs provided in the
+\var{environ} parameter.  It's useful for verifying that a WSGI server
+(such as \module{wsgiref.simple_server}) is able to run a simple WSGI
+application correctly.
+\end{funcdesc}
+
+
+\begin{classdesc}{WSGIServer}{server_address, RequestHandlerClass}
+Create a \class{WSGIServer} instance.  \var{server_address} should be
+a \code{(host,port)} tuple, and \var{RequestHandlerClass} should be
+the subclass of \class{BaseHTTPServer.BaseHTTPRequestHandler} that will
+be used to process requests.
+
+You do not normally need to call this constructor, as the
+\function{make_server()} function can handle all the details for you.
+
+\class{WSGIServer} is a subclass
+of \class{BaseHTTPServer.HTTPServer}, so all of its methods (such as
+\method{serve_forever()} and \method{handle_request()}) are available.
+\class{WSGIServer} also provides these WSGI-specific methods:
+
+\begin{methoddesc}{set_app}{application}
+Sets the callable \var{application} as the WSGI application that will
+receive requests.
+\end{methoddesc}
+
+\begin{methoddesc}{get_app}{}
+Returns the currently-set application callable.
+\end{methoddesc}
+
+Normally, however, you do not need to use these additional methods, as
+\method{set_app()} is normally called by \function{make_server()}, and
+the \method{get_app()} exists mainly for the benefit of request handler
+instances.
+\end{classdesc}
 
 
 
+\begin{classdesc}{WSGIRequestHandler}{request, client_address, server}
+Create an HTTP handler for the given \var{request} (i.e. a socket),
+\var{client_address} (a \code{(host,port)} tuple), and \var{server}
+(\class{WSGIServer} instance).
 
+You do not need to create instances of this class directly; they are
+automatically created as needed by \class{WSGIServer} objects.  You
+can, however, subclass this class and supply it as a \var{handler_class}
+to the \function{make_server()} function.  Some possibly relevant
+methods for overriding in subclasses:
 
+\begin{methoddesc}{get_environ}{}
+Returns a dictionary containing the WSGI environment for a request.  The
+default implementation copies the contents of the \class{WSGIServer}
+object's \member{base_environ} dictionary attribute and then adds
+various headers derived from the HTTP request.  Each call to this method
+should return a new dictionary containing all of the relevant CGI
+environment variables as specified in \pep{333}.
+\end{methoddesc}
 
+\begin{methoddesc}{get_stderr}{}
+Return the object that should be used as the \code{wsgi.errors} stream.
+The default implementation just returns \code{sys.stderr}.
+\end{methoddesc}
 
+\begin{methoddesc}{handle}{}
+Process the HTTP request.  The default implementation creates a handler
+instance using a \module{wsgiref.handlers} class to implement the actual
+WSGI application interface.
+\end{methoddesc}
 
-
-
-
-
-
-
-
-
-
+\end{classdesc}
 
 
 
