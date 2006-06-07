@@ -392,20 +392,20 @@ returned application will forward all requests to the original
 the server invoking it are conforming to the WSGI specification and to
 RFC 2616.
 
-Any detected nonconformance results in an AssertionError being raised;
-note, however, that how these errors are handled is server-dependent.
-For example, \module{wsgiref.simple_server} and other servers based on
-\module{wsgiref.handlers} (that don't override the error handling
-methods to do something else) will simply output a message that an error
-has occurred, and dump the traceback to \code{sys.stderr} or some other
-error stream.
+Any detected nonconformance results in an \exception{AssertionError}
+being raised; note, however, that how these errors are handled is
+server-dependent.  For example, \module{wsgiref.simple_server} and other
+servers based on \module{wsgiref.handlers} (that don't override the
+error handling methods to do something else) will simply output a
+message that an error has occurred, and dump the traceback to
+\code{sys.stderr} or some other error stream.
 
 This wrapper may also generate output using the \module{warnings} module
 to indicate behaviors that are questionable but which may not actually
 be prohibited by \pep{333}.  Unless they are suppressed using Python
 command-line options or the \module{warnings} API, any such warnings
-will be written to \code{sys.stderr} (NOT \code{wsgi.errors}, unless
-they happen to be the same object).
+will be written to \code{sys.stderr} (\emph{not} \code{wsgi.errors},
+unless they happen to be the same object).
 \end{funcdesc}
 
 \subsection{\module{wsgiref.handlers} -- server/gateway base classes}
@@ -432,7 +432,7 @@ This class is a subclass of \class{BaseCGIHandler} that sets
 
 
 \begin{classdesc}{BaseCGIHandler}{stdin, stdout, stderr, environ
-\optional{,multithread=True \optional{, multiprocess=False}}}
+\optional{, multithread=True \optional{, multiprocess=False}}}
 
 Similar to \class{CGIHandler}, but instead of using the \module{sys} and
 \module{os} modules, the CGI environment and I/O streams are specified
@@ -467,8 +467,8 @@ the \member{stdin}, \member{stdout}, \member{stderr}, and
 
 \begin{classdesc}{BaseHandler}{}
 This is an abstract base class for running WSGI applications.  Each
-instance a single HTTP request, although in principle you could create
-a subclass that was reusable for multiple requests.
+instance will handle a single HTTP request, although in principle you
+could create a subclass that was reusable for multiple requests.
 
 \class{BaseHandler} instances have only one method intended for external
 use:
@@ -555,8 +555,8 @@ variable.  It defaults to false in \class{BaseHandler}, but
 
 \begin{memberdesc}{os_environ}
 The default environment variables to be included in every request's
-WSGI environment.  By default, this is a copy of \var{os.environ} at the
-time that \module{wsgiref.handlers} was imported, but subclasses can
+WSGI environment.  By default, this is a copy of \code{os.environ} at
+the time that \module{wsgiref.handlers} was imported, but subclasses can
 either create their own at the class or instance level.  Note that the
 dictionary should be considered read-only, since the default value is
 shared between multiple classes and instances.
@@ -619,7 +619,7 @@ Methods and attributes for customizing exception handling:
 Log the \var{exc_info} tuple in the server log.  \var{exc_info} is a
 \code{(\var{type}, \var{value}, \var{traceback})} tuple.  The default
 implementation simply writes the traceback to the request's
-\var{wsgi.errors} stream and flushes it.  Subclasses can override this
+\code{wsgi.errors} stream and flushes it.  Subclasses can override this
 method to change the format or retarget the output, mail the traceback
 to an administrator, or whatever other action may be deemed suitable.
 \end{methoddesc}
