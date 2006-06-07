@@ -17,11 +17,12 @@ setup(
 
     description="WSGI (PEP 333) Reference Library",
     author="Phillip J. Eby",
-    author_email="peak@eby-sarna.com",
+    author_email="web-sig@python.org",
     license="PSF or ZPL",
 
-    url="http://www.python.org/peps/pep-0333.html",
+    url="http://cheeseshop.python.org/pypi/wsgiref",
 
+    long_description = open('README.txt').read(),
     test_suite  = 'test_wsgiref',
     packages    = ['wsgiref'],
 )
