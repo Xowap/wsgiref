@@ -575,6 +575,7 @@ class HandlerTests(TestCase):
 # This epilogue is needed for compatibility with the Python 2.5 regrtest module
 
 def test_main():
+    import unittest
     from test.test_support import run_suite
     run_suite(
         unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])
@@ -582,7 +583,6 @@ def test_main():
 
 if __name__ == "__main__":
     test_main()
-
 
 
 
