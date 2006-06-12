@@ -90,7 +90,7 @@ def compare_generic_iter(make_it,match):
     it = make_it()
     n = 0
     for item in match:
-        assert it[n]==item
+        if not it[n]==item: raise AssertionError
         n+=1
     try:
         it[n]
@@ -106,9 +106,9 @@ def compare_generic_iter(make_it,match):
     else:
         # Only test iter mode under 2.2+
         it = make_it()
-        assert iter(it) is it
+        if not iter(it) is it: raise AssertionError
         for item in match:
-            assert it.next()==item
+            if not it.next()==item: raise AssertionError
         try:
             it.next()
         except StopIteration:
@@ -440,7 +440,7 @@ class HandlerTests(TestCase):
         h = BaseCGIHandler(None,None,None,{})
         h.setup_environ()
         for key in 'wsgi.url_scheme', 'wsgi.input', 'wsgi.errors':
-            assert h.environ.has_key(key)
+            self.assert_(h.environ.has_key(key))
 
     def testScheme(self):
         h=TestHandler(HTTPS="on"); h.setup_environ()

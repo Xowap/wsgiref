@@ -9,7 +9,7 @@ from setuptools import setup, find_packages
 
 # Metadata
 PACKAGE_NAME = "wsgiref"
-PACKAGE_VERSION = "0.1"
+PACKAGE_VERSION = "0.1.1"
 
 setup(
     name=PACKAGE_NAME,
