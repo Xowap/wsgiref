@@ -252,7 +252,7 @@ class PartialIteratorWrapper:
 
     def __iter__(self):
         # We want to make sure __iter__ is called
-        return IteratorWrapper(self.iterator)
+        return IteratorWrapper(self.iterator, None)
 
 class IteratorWrapper:
 
@@ -430,4 +430,3 @@ def check_iterator(iterator):
     assert_(not isinstance(iterator, str),
         "You should not return a string as your application iterator, "
         "instead return a single-item list containing that string.")
-

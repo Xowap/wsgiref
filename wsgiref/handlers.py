@@ -209,7 +209,7 @@ class BaseHandler:
         assert type(data) is StringType,"write() argument must be string"
 
         if not self.status:
-             raise AssertionError("write() before start_response()")
+            raise AssertionError("write() before start_response()")
 
         elif not self.headers_sent:
             # Before the first output, send the stored headers
@@ -489,4 +489,4 @@ class CGIHandler(BaseCGIHandler):
 
 
 
-
+#

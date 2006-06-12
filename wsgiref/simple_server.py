@@ -184,7 +184,6 @@ def make_server(
 
 
 if __name__ == '__main__':
-    server_address = ('', 8000)
     httpd = make_server('', 8000, demo_app)
     sa = httpd.socket.getsockname()
     print "Serving HTTP on", sa[0], "port", sa[1], "..."
@@ -203,3 +202,4 @@ if __name__ == '__main__':
 
 
 
+#
