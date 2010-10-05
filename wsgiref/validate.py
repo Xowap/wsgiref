@@ -116,6 +116,11 @@ import sys
 from types import DictType, StringType, TupleType, ListType
 import warnings
 
+try:
+    bytes
+except NameError:
+    bytes = str
+
 header_re = re.compile(r'^[a-zA-Z][a-zA-Z0-9\-_]*$')
 bad_header_value_re = re.compile(r'[\000-\037]')
 
@@ -191,12 +196,13 @@ class InputWrapper:
     def read(self, *args):
         assert_(len(args) <= 1)
         v = self.input.read(*args)
-        assert_(type(v) is type(""))
+        assert_(type(v) is bytes)
         return v
 
-    def readline(self):
-        v = self.input.readline()
-        assert_(type(v) is type(""))
+    def readline(self, *args):
+        assert_(len(args) <= 1)
+        v = self.input.readline(*args)
+        assert_(type(v) is bytes)
         return v
 
     def readlines(self, *args):
@@ -204,7 +210,7 @@ class InputWrapper:
         lines = self.input.readlines(*args)
         assert_(type(lines) is type([]))
         for line in lines:
-            assert_(type(line) is type(""))
+            assert_(type(line) is bytes)
         return lines
 
     def __iter__(self):
@@ -242,7 +248,7 @@ class WriteWrapper:
         self.writer = wsgi_writer
 
     def __call__(self, s):
-        assert_(type(s) is type(""))
+        assert_(type(s) is bytes)
         self.writer(s)
 
 class PartialIteratorWrapper:
@@ -269,6 +275,8 @@ class IteratorWrapper:
         assert_(not self.closed,
             "Iterator read after closed")
         v = self.iterator.next()
+        if type(v) is not bytes:
+            assert_(False, "Iterator yielded non-bytestring (%r)" % (v,))
         if self.check_start_response is not None:
             assert_(self.check_start_response,
                 "The application returns and we started iterating over its body, but start_response has not yet been called")
@@ -427,6 +435,6 @@ def check_iterator(iterator):
     # Technically a string is legal, which is why it's a really bad
     # idea, because it may cause the response to be returned
     # character-by-character
-    assert_(not isinstance(iterator, str),
+    assert_(not isinstance(iterator, (bytes,str)),
         "You should not return a string as your application iterator, "
         "instead return a single-item list containing that string.")

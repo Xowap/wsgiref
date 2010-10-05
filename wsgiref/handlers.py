@@ -175,6 +175,8 @@ class BaseHandler:
         elif self.headers is not None:
             raise AssertionError("Headers already set!")
 
+        self.status = status
+        self.headers = self.headers_class(headers)
         assert type(status) is StringType,"Status must be a string"
         assert len(status)>=4,"Status must be at least 4 characters"
         assert int(status[:3]),"Status message must begin w/3-digit code"
@@ -184,8 +186,6 @@ class BaseHandler:
                 assert type(name) is StringType,"Header names must be strings"
                 assert type(val) is StringType,"Header values must be strings"
                 assert not is_hop_by_hop(name),"Hop-by-hop headers not allowed"
-        self.status = status
-        self.headers = self.headers_class(headers)
         return self.write
 
 
@@ -467,13 +467,13 @@ class CGIHandler(BaseCGIHandler):
     """
 
     wsgi_run_once = True
+    os_environ = {}     # Handle GAE and other multi-run CGI use cases
 
     def __init__(self):
         BaseCGIHandler.__init__(
             self, sys.stdin, sys.stdout, sys.stderr, dict(os.environ.items()),
             multithread=False, multiprocess=True
         )
-
 
 
 

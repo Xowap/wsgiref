@@ -162,6 +162,47 @@ will also have a \method{close()} method, and it will invoke the
 
 
 
+\begin{funcdesc}{test}{app, environ=\code{\{\}}, form=\code{\{\}} **kw} 
+Print the output of a WSGI app (e.g. for use in doctests)
+
+Runs \var{app} as a WSGI application and prints its output.  If an untrapped
+error occurs in \var{app}, it drops into the \code{pdb} debugger's post-mortem
+debug shell (using \code{sys.__stdout__} if \code{sys.stdout} has been
+replaced).
+
+Any keyword arguments are added to the environment used to run \var{app}.  If
+a keyword argument begins with \code{wsgi_}, the \code{_} is replaced with a
+\code{.}, so that you can set e.g. \code{wsgi.multithread} using a
+\code{wsgi_multithread} keyword argument.
+
+If a non-empty \var{form} dictionary is provided, it is treated as a collection
+of fields for a form \code{POST}. The \code{REQUEST_METHOD} will default to
+\code{POST}, and the default \code{CONTENT_LENGTH}, \code{CONTENT_TYPE}, and
+\code{wsgi.input} values will be appropriately set (but can still be
+overridden by explicit keyword arguments or the \var{environ} argument).
+
+Any \var{form} values that are not instances of \code{basestring} are assumed to
+be *sequences* of values, and will result in multiple name/value pairs
+being added to the encoded data sent to the application.
+
+Any WSGI-required variables that are not specified by \var{environ}, \var{form},
+or keyword arguments, are initialized to default values using the
+\function{setup_testing_defaults()} function.
+
+(\versionadded{0.2})
+
+\end{funcdesc}
+
+
+
+
+
+
+
+
+
+
+
 \subsection{\module{wsgiref.headers} -- WSGI response header tools}
 \declaremodule{}{wsgiref.headers}
 
