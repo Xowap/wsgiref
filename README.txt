@@ -10,4 +10,8 @@ HTML
 PDF
   http://peak.telecommunity.com/wsgiref.pdf
 
+(You can also check out the `development version`_ using
+``easy_install wsgiref==dev``.)
+
+.. _development version: svn://svn.eby-sarna.com/svnroot/wsgiref#egg=wsgiref-dev
 
