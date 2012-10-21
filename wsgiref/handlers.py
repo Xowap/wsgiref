@@ -129,17 +129,17 @@ class BaseHandler:
         in the event loop to iterate over the data, and to call
         'self.close()' once the response is finished.
         """
-        if not self.result_is_file() or not self.sendfile():
-            for data in self.result:
-                self.write(data)
-            self.finish_content()
-        self.close()
-
+        try:
+            if not self.result_is_file() or not self.sendfile():
+                for data in self.result:
+                    self.write(data)
+                self.finish_content()
+        finally:
+            self.close()
 
     def get_scheme(self):
         """Return the URL scheme being used"""
         return guess_scheme(self.environ)
-
 
     def set_content_length(self):
         """Compute Content-Length or switch to chunked encoding if possible"""
@@ -153,7 +153,6 @@ class BaseHandler:
                 return
         # XXX Try for chunked encoding if origin server and client is 1.1
 
-
     def cleanup_headers(self):
         """Make any necessary header changes or defaults
 
@@ -161,6 +160,7 @@ class BaseHandler:
         """
         if not self.headers.has_key('Content-Length'):
             self.set_content_length()
+
 
     def start_response(self, status, headers,exc_info=None):
         """'start_response()' callable as specified by PEP 333"""
